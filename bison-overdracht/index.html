@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overdracht Bison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Source+Sans+3:wght@400;600&display=swap">
+<script src="lib/jszip.min.js"></script>
+<script src="lib/d3.min.js"></script>
+<style>
+/* Layout: brede werkpagina, kaarten in een raster dat naar één kolom valt op telefoon */
+:root {
+  --bg: #f5f7f9; --panel: #ffffff; --fg: #15212c; --muted: #5b6875; --line: #dde3e9;
+  --accent: #1d5a8c; --accent-soft: #d6e4f0;
+  --ok: #2f8a4c; --warn: #d98a12; --bad: #c8372d; --none: #b7a6c9;
+  --grid: #e8edf1; --axis: #b9c3cc;
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161d; --panel: #16212b; --fg: #e6edf3; --muted: #93a1ae; --line: #26333f;
+    --accent: #6fa8dc; --accent-soft: #1d3346;
+    --ok: #4cb36b; --warn: #f0a530; --bad: #ef5d50; --none: #8a7aa0;
+    --grid: #1f2b36; --axis: #3a4855; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161d; --panel: #16212b; --fg: #e6edf3; --muted: #93a1ae; --line: #26333f;
+  --accent: #6fa8dc; --accent-soft: #1d3346;
+  --ok: #4cb36b; --warn: #f0a530; --bad: #ef5d50; --none: #8a7aa0;
+  --grid: #1f2b36; --axis: #3a4855; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; }
+.wrap { max-width: 88rem; margin-inline: auto; display: grid; gap: 32px; }
+h1, h2, h3, h4 { text-wrap: balance; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2rem, 4vw, 2.8rem); margin: 0; line-height: 1.1; }
+h2 { font-family: var(--display); font-weight: 500; font-size: 1.5rem; margin: 0; }
+h3 { font-size: 1rem; font-weight: 600; margin: 0; }
+.eyebrow { text-transform: uppercase; letter-spacing: .06em; font-size: .75rem; color: var(--muted); margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+b { font-weight: 600; }
+.head { display: grid; gap: 10px; }
+.lede { margin: 0; max-width: 70ch; font-size: 1.05rem; }
+.loader { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--panel); border: 1px dashed var(--axis); border-radius: var(--r); padding: 14px 16px; }
+.loader.drag { border-color: var(--accent); background: var(--accent-soft); }
+.btn { font: inherit; font-weight: 600; background: var(--accent); color: var(--bg); border: 0; border-radius: var(--r); padding: 8px 14px; cursor: pointer; }
+.btn:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.loader input[type=file] { display: none; }
+.status { font-size: .9rem; color: var(--muted); }
+.status.err { color: var(--bad); }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: .9rem; }
+.filters label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+select, input[type=search] { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.tile .lbl { font-size: .8rem; color: var(--muted); }
+.tile .val { font-family: var(--display); font-size: 2.1rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tile.warn .val { color: var(--warn); } .tile.bad .val { color: var(--bad); }
+.tile .note { font-size: .78rem; color: var(--muted); }
+section { display: grid; gap: 14px; }
+.wrap > *, section > *, .grid > *, .grid-3 > *, .wide > *, .card > * { min-width: 0; }
+section > .sub { margin: 0; color: var(--muted); max-width: 75ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 14px; }
+.wide { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 860px) { .wide { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card .note { margin: 0; color: var(--muted); font-size: .85rem; }
+.chart { position: relative; min-height: 60px; }
+.chart svg { display: block; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--body); }
+.chart .lbl { fill: var(--fg); font-size: 12.5px; }
+.chart .val { fill: var(--fg); font-size: 12px; font-variant-numeric: tabular-nums; }
+.click { cursor: pointer; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 6px 18px rgba(0,0,0,.14); padding: 6px 9px; font-size: .8rem; z-index: 5; max-width: 17rem; }
+.tip .h { color: var(--muted); }
+.tip .r { display: flex; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; }
+.sw { width: 9px; height: 9px; border-radius: 2px; flex: none; display: inline-block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .8rem; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.legend li { display: inline-flex; gap: 6px; align-items: center; }
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 14px; }
+.phase { border-top: 3px solid var(--line); padding-top: 8px; display: grid; gap: 2px; }
+.phase h4 { margin: 0; font-size: .95rem; }
+.phase p { margin: 0; font-size: .85rem; color: var(--muted); }
+.phase .big { font-family: var(--display); font-size: 1.8rem; color: var(--fg); }
+.tablebox { overflow: auto; max-height: 36rem; border: 1px solid var(--line); border-radius: var(--r); }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+th { position: sticky; top: 0; background: var(--panel); text-align: left; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; }
+td.strong { font-weight: 600; min-width: 13rem; }
+td.wrapc { min-width: 18rem; max-width: 40rem; }
+td.rank { font-family: var(--display); font-size: 1.3rem; }
+.chip { display: inline-block; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); margin: 0 4px 4px 0; white-space: nowrap; font-size: .8rem; }
+.bar { display: flex; gap: 8px; align-items: center; min-width: 9rem; }
+.bar i { display: block; height: 8px; border-radius: 2px; background: var(--axis); }
+.bar.top i { background: var(--accent); }
+.soort-Afspraak { color: var(--ok); } .soort-Structureel { color: var(--warn); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font: inherit; font-size: .8rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls input { flex: 1 1 14rem; max-width: 26rem; min-width: 0; }
+ul.list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80ch; }
+.concl { display: grid; gap: 10px; }
+.concl details { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.concl summary { cursor: pointer; font-weight: 600; }
+.concl p { margin: 6px 0 0; max-width: 80ch; color: var(--muted); }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+footer { color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Ketenverbetering VH6 · Havendienst Bison</p>
+    <h1>Overdracht Bison</h1>
+    <p class="lede" id="lede">Laad de rapportage (Excel) om het dashboard te vullen.</p>
+    <div class="loader" id="drop">
+      <button class="btn" type="button" id="pick">Excel kiezen</button>
+      <input type="file" id="file" accept=".xlsx">
+      <span class="status" id="status">Kies of sleep het bestand 'Rapportage overdracht Bison.xlsx' hierheen. Het bestand blijft op je eigen computer.</span>
+    </div>
+    <div class="filters" id="filters" hidden>
+      <label for="f-van">Van week <select id="f-van"></select></label>
+      <label for="f-tot">t/m week <select id="f-tot"></select></label>
+      <label for="f-dienst">Dienst <select id="f-dienst"><option value="">Dag en nacht</option><option value="Dag">Alleen dag</option><option value="Nacht">Alleen nacht</option></select></label>
+      <button class="chips-reset btn" type="button" id="f-reset" style="background:transparent;color:var(--accent);border:1px solid var(--line)">Hele periode</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="dash" hidden>
+    <section class="tiles" aria-label="Kerncijfers">
+      <div class="tile"><span class="lbl">Diensten in de rapportage</span><span class="val" id="k-diensten">—</span><span class="note">Dag- en nachtdiensten</span></div>
+      <div class="tile warn"><span class="lbl">Oranje of rood</span><span class="val" id="k-pct">—</span><span class="note">Van de diensten met overdracht</span></div>
+      <div class="tile bad"><span class="lbl">Rode diensten</span><span class="val" id="k-rood">—</span><span class="note">Zwaarste beleving</span></div>
+      <div class="tile"><span class="lbl">Gem. actieve vaartijd</span><span class="val" id="k-vaart">—</span><span class="note">Uur per dienst, waar ingevuld</span></div>
+      <div class="tile"><span class="lbl">Geen overdracht ontvangen</span><span class="val" id="k-geen">—</span><span class="note">Diensten zonder ingevuld formulier</span></div>
+      <div class="tile bad"><span class="lbl">Veiligheidsmeldingen</span><span class="val" id="k-veilig">—</span><span class="note">Ongevallen en onveilige situaties</span></div>
+    </section>
+
+    <section id="beleving">
+      <h2>Hoe gingen de diensten?</h2>
+      <p class="sub">De bemanning kleurt elke dienst groen, oranje of rood. Roze in het Excel betekent dat er geen overdracht is ontvangen.</p>
+      <div class="wide">
+        <div class="card">
+          <h3>Beleving per week</h3>
+          <p class="note">Aantal diensten per kleur. De gearceerde band is de laagwaterperiode uit het Excel.</p>
+          <ul class="legend"><li><span class="sw" style="background:var(--ok)"></span>Groen</li><li><span class="sw" style="background:var(--warn)"></span>Oranje</li><li><span class="sw" style="background:var(--bad)"></span>Rood</li><li><span class="sw" style="background:var(--none)"></span>Geen overdracht</li></ul>
+          <div class="chart" id="c-week" style="min-height:270px"></div>
+        </div>
+        <div class="card">
+          <h3>Dagdienst tegenover nachtdienst</h3>
+          <p class="note">Verdeling van de beleving en gemiddelde actieve vaartijd.</p>
+          <div class="chart" id="c-dn"></div>
+          <p class="note" id="dn-text"></p>
+        </div>
+      </div>
+      <div class="card" id="phase-card">
+        <h3>Fases in de periode</h3>
+        <p class="note">Voor, tijdens en na de laagwaterperiode (weken die in het Excel als laagwaterperiode zijn gemarkeerd).</p>
+        <div class="phases" id="phases"></div>
+      </div>
+    </section>
+
+    <section id="oorzaken">
+      <h2>Wat komt het meest voor?</h2>
+      <p class="sub">Elke toelichting bij een oranje of rode dienst (en elke extra opmerking) wordt automatisch ingedeeld in thema's op basis van trefwoorden. Klik op een thema om de meldingen te filteren.</p>
+      <div class="grid">
+        <div class="card"><h3>Oorzaken per thema</h3><p class="note">Aantal meldingen waarin het thema voorkomt. Eén melding kan meerdere thema's raken.</p><div class="chart" id="c-thema"></div></div>
+        <div class="card"><h3>Genoemde partijen</h3><p class="note">Hoe vaak een ketenpartij in de meldingen genoemd wordt. KVB staat voor koppelverbanden en zelfladers.</p><div class="chart" id="c-partij"></div></div>
+      </div>
+      <div class="card"><h3>Thema's door de weken heen</h3><p class="note">Hoe donkerder het vak, hoe vaker het thema die week genoemd werd.</p><div class="chart" id="c-heat"></div></div>
+    </section>
+
+    <section id="oplossingen">
+      <h2>Beste oplossingen</h2>
+      <p class="sub">De verbetervoorstellen uit de weekbladen, samengevoegd. Gerangschikt op hoeveel meldingen in de gekozen periode ze raken (een melding met een thema dat de oplossing aanpakt), daarna op hoe vaak het voorstel terugkwam.</p>
+      <div class="card">
+        <div class="tablebox"><table>
+          <thead><tr><th>#</th><th>Oplossing</th><th>Wat houdt het in</th><th>Pakt aan</th><th>Raakt meldingen</th><th class="num">Voorgesteld in weken</th><th>Soort</th></tr></thead>
+          <tbody id="t-opl"></tbody>
+        </table></div>
+        <p class="note">Afspraak: te regelen met overleg en werkafspraken. Structureel: vraagt een systeem-, capaciteits- of onderhoudsaanpak. De lijst met oplossingen staat in dit bestand (index.html, zoek op OPLOSSINGEN) en is daar aan te vullen.</p>
+      </div>
+    </section>
+
+    <section id="registraties">
+      <h2>Registraties per week</h2>
+      <p class="sub">De getelde kolommen uit de weekbladen. Elke grafiek heeft een eigen schaal.</p>
+      <div class="grid-3" id="minis"></div>
+    </section>
+
+    <section id="meldingen">
+      <h2>Alle meldingen</h2>
+      <p class="sub">De toelichtingen bij oranje en rode diensten en de extra opmerkingen uit het Excel.</p>
+      <div class="card">
+        <div class="controls"><label for="zoek" class="muted small">Zoeken</label><input id="zoek" type="search" placeholder="Bijv. HGK, anker, EMO"><span class="muted small"><span id="n-meld">0</span> meldingen</span></div>
+        <div class="chips" id="chips" role="group" aria-label="Filter op thema"></div>
+        <div class="tablebox"><table>
+          <thead><tr><th>Datum</th><th>Dienst</th><th>Melding</th><th>Thema's</th><th>Partijen</th></tr></thead>
+          <tbody id="t-meld"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="conclusies">
+      <h2>Conclusies per week</h2>
+      <p class="sub">De algemene conclusie die in het weekblad is geschreven, nieuwste eerst.</p>
+      <div class="card concl" id="concl"></div>
+    </section>
+
+    <section id="kwaliteit">
+      <h2>Over de rapportage zelf</h2>
+      <div class="grid">
+        <div class="card"><h3>Wat opviel in dit bestand</h3><ul class="list" id="dq"></ul></div>
+        <div class="card"><h3>Tips voor de volgende rapportages</h3>
+          <ul class="list">
+            <li>Vul de vaartijd altijd in als getal; 0 als er niet gevaren is.</li>
+            <li>Noteer herwerk als aantal, met de oorzaak in de toelichting.</li>
+            <li>Houd per weekblad dezelfde indeling aan: tabel bovenaan, dan "Oorzaken oranje/rode diensten", dan "Mogelijke verbeteracties" en de conclusie.</li>
+            <li>Zet verbeteracties als tekst in plaats van als plaatje, zodat ze meegenomen kunnen worden.</li>
+            <li>Noem in de toelichting de betrokken partij (HGK, EECV, EMO, VH, stuurstand, KVB).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="foot">Het Excel wordt alleen in je eigen browser gelezen en nergens naartoe gestuurd.</footer>
+</div>
+
+<script>
+/* ===== Instellingen die je zelf kunt aanpassen ===== */
+
+// Thema's en trefwoorden waarmee meldingen automatisch worden ingedeeld (kleine letters; /.../ is een patroon).
+const THEMAS = [
+  { code: 'plan', naam: 'Planning laat, onduidelijk of gewijzigd', woorden: ['planning', 'planlijst', 'lijst', 'aankomsttijd', 'wissels', 'mutatie', 'wijziging', 'te laat', 'plan ', 'niet op de planning', 'nergens op de planning', 'laadvolgorde', 'vertrektijd'] },
+  { code: 'herform', naam: 'Herformeren en ombouwen', woorden: ['uit elkaar', 'ombouw', 'formatie', 'formeren', 'geformeerd', 'formeer', 'fles', 'pakket', 'herkoppel', 'omkoppel', 'verhaald', 'verplaats', 'opruim', 'uitwissel', 'herwerk'] },
+  { code: 'haven', naam: 'Haven vol / ligplaatsen', woorden: ['haven', /\b(is|ligt|liggen|lag|te|heel|helemaal|erg) (heel |erg |te |helemaal )?vol\b/, 'ligplaats', 'ruimte', 'losse bakken', 'ankerplaats', 'bakkenplaats', 'doorvaart', 'kwijt'] },
+  { code: 'tech', naam: 'Techniek en materieel', woorden: ['storing', 'defect', 'reparatie', 'motor', 'onklaar', 'ankers', 'anker die', 'kraan', 'draden', 'draad', 'technisch', 'gereedschap', 'pomp', 'pech', 'start', 'koppeltouw', 'nokken', 'mb1', 'niet bleven liggen', 'niet hielden', 'voor anker gooien', 'voor anker gegooid'] },
+  { code: 'piek', naam: 'Piekdrukte en werk van buitenaf', woorden: ['emo', 'buitenaf', 'druk', 'klaargelegd', 'klaar moeten maken', 'klaarmaken', 'tegelijk', 'setjes', 'vaarmoment', 'bunkerboot', 'drinkwaterboot', 'snel vol'] },
+  { code: 'afstem', naam: 'Afstemming tussen partijen', woorden: ['communicatie', 'afstem', 'discussie', 'stuurstand', 'niet bekend', ' info', 'niet gemeld', 'wisten niet', 'weet niet', 'geïnformeerd', 'zelfladers', 'ipad', 'verwarring', 'contact'] },
+  { code: 'fout', naam: 'Fouten van andere partijen', woorden: ['te diep', 'verkeerde', 'niet goed waren achtergelaten', 'fouten van andere', 'los op dek', 'zonder vooranker', 'verkeerd'] },
+  { code: 'weer', naam: 'Weer en water', woorden: ['warm', 'wind', 'onweer', 'laag water', 'hitte'] },
+  { code: 'veil', naam: 'Veiligheid', woorden: ['ongeval', 'onveilig', 'schade', 'verzuim'] }
+];
+
+// Ketenpartijen die in meldingen worden herkend.
+const PARTIJEN = [
+  { naam: 'HGK', re: /\bhgk/i }, { naam: 'EECV', re: /\beecv/i }, { naam: 'EMO', re: /\bemo\b/i },
+  { naam: 'VH', re: /\bvh\s?\d*\b/i }, { naam: 'Stuurstand', re: /stuurstand/i },
+  { naam: 'KVB', re: /\bkvb|koppelverband|zelflader/i }, { naam: 'EBS', re: /\bebs\b/i }, { naam: 'HKM', re: /\bhkm\b/i }
+];
+
+// Samengevoegde verbetervoorstellen uit de weekbladen (week 22 t/m 43). Hier aan te vullen.
+const OPLOSSINGEN = [
+  { oplossing: 'Vaste aanlevertijd en freeze-moment voor planningen', toelichting: 'HGK, EECV en VH leveren hun planning op een vaste cut-off tijd aan. Daarna alleen nog wijzigen bij uitzondering, met een escalatieroute.', themas: ['plan', 'herform'], weken: [25, 26, 29, 37, 38], soort: 'Afspraak' },
+  { oplossing: 'Eén gedeelde, actuele planning voor alle partijen', toelichting: 'Eén planningsomgeving met aankomsttijden, baknummers en bestemming, en een laatste controle voordat de lijst wordt vrijgegeven.', themas: ['plan', 'afstem', 'fout'], weken: [25, 27, 28, 29, 38], soort: 'Structureel' },
+  { oplossing: 'Korte operationele afstemming per dienst', toelichting: 'Dagelijks of per dienst kort afstemmen tussen planning, stuurstand, terminals en koppelverbanden, met één aanspreekpunt per dienst.', themas: ['afstem', 'plan', 'piek'], weken: [26, 27, 29, 37, 39, 43], soort: 'Afspraak' },
+  { oplossing: 'Capaciteitsmanagement van de haven', toelichting: 'Maximale bezetting per gebied vastleggen, de bezetting dagelijks volgen en de aanvoer van nieuwe bakken daarop sturen.', themas: ['haven', 'piek'], weken: [26, 28, 29, 37, 38, 39], soort: 'Structureel' },
+  { oplossing: 'Bufferlocatie en minder lege bakken in de haven', toelichting: 'Voorraad lege bakken beperken en tijdelijke bufferlocaties aanwijzen of contracteren voor piekperiodes.', themas: ['haven', 'herform'], weken: [34, 38], soort: 'Structureel' },
+  { oplossing: 'Vaste liggebieden en ankerinstructie Dintelhaven', toelichting: 'Vaste plekken voor lege bakken, geladen bakken en ingehuurde verbanden, met vaste ankerafstanden (schema Anker instructie Dintelhaven).', themas: ['haven', 'herform'], weken: [24, 29, 38], soort: 'Afspraak' },
+  { oplossing: 'Formaties intact houden en wijzigingen bundelen', toelichting: 'Formeringen standaardiseren, wijzigingen bundelen en pas doorvoeren na een korte impactcheck op de operatie.', themas: ['herform', 'plan'], weken: [23, 29, 37, 41], soort: 'Afspraak' },
+  { oplossing: 'Preventief onderhoud en storingsprotocol', toelichting: 'Inspecties op motoren, startinstallaties, kraan (draadlift), ankers en nokken; kritieke reserveonderdelen op voorraad.', themas: ['tech'], weken: [22, 23, 24, 25, 28, 37], soort: 'Structureel' },
+  { oplossing: 'Gereedheidscheck van bakken vóór vertrek', toelichting: 'Diepgang, ankers, lierdraden en koppeldraden controleren voordat bakken worden aangeboden voor laden of transport.', themas: ['fout', 'tech'], weken: [28, 29], soort: 'Afspraak' },
+  { oplossing: 'Werkafspraken en escalatie met ketenpartners', toelichting: 'Vastleggen wie wat doet (stuurstand, zelfladers, koppelverbanden, EMO) en terugkerende knelpunten samen evalueren.', themas: ['afstem', 'fout', 'piek'], weken: [23, 26, 29, 37, 43], soort: 'Afspraak' },
+  { oplossing: 'Pieken van EMO en werk van buitenaf vooraf plannen', toelichting: 'Verwachte volumes eerder delen, prioriteitsregels voor pieken en een flexibel inzetplan voor mensen en materieel.', themas: ['piek'], weken: [39, 41], soort: 'Structureel' },
+  { oplossing: 'Eén hitte- en weerprotocol voor alle locaties', toelichting: 'Of iedereen stopt of iedereen gaat door; weersverwachting vooraf meenemen in de planning.', themas: ['weer'], weken: [22, 25, 26, 43], soort: 'Afspraak' },
+  { oplossing: 'Vaste overdracht met controlepunten', toelichting: 'Standaard overdracht per dienst met vaste controlepunten, en een papieren back-up zolang de iPad niet goed werkt.', themas: ['afstem'], weken: [24, 28, 33], soort: 'Afspraak' },
+  { oplossing: 'Veiligheidsrisico’s meenemen in de planning', toelichting: 'Onveilige situaties en incidenten registreren en evalueren, en risico’s meewegen bij drukke planningen.', themas: ['veil'], weken: [24], soort: 'Afspraak' }
+];
+
+// Als dit bestand naast index.html staat (bijv. in de GitHub-repo), wordt het automatisch geladen.
+const AUTO_BESTAND = 'data/rapportage.xlsx';
+</script>
+
+<script>
+/* ===== Excel inlezen (zonder extra software, alleen in de browser) ===== */
+const XLSX_READER = (() => {
+  const NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const parse = (txt) => new DOMParser().parseFromString(txt, 'application/xml');
+  const els = (node, name) => Array.from(node.getElementsByTagNameNS('*', name));
+  const colIdx = (ref) => { const m = /^([A-Z]+)(\d+)$/.exec(ref); let n = 0; for (const ch of m[1]) n = n * 26 + ch.charCodeAt(0) - 64; return { c: n, r: Number(m[2]) }; };
+  const hexToRgb = (h) => { h = h.replace(/^#/, ''); if (h.length === 8) h = h.slice(2); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+  const tintRgb = (rgb, tint) => rgb.map((v) => Math.round(tint < 0 ? v * (1 + tint) : v + (255 - v) * tint));
+
+  // Herken de belevingskleur van een cel.
+  const classify = (rgb) => {
+    if (!rgb) return 'Onbekend';
+    const [r, g, b] = rgb.map((v) => v / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+    if (d < 0.08) return 'Onbekend';
+    let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360;
+    if (h >= 270 || (h < 20 && l > 0.7)) return 'Geen overdracht';
+    if (h < 20 || h >= 345) return 'Rood';
+    if (h < 60) return 'Oranje';
+    if (h < 180) return 'Groen';
+    return 'Onbekend';
+  };
+
+  async function read(buf) {
+    const zip = await JSZip.loadAsync(buf);
+    const txt = async (p) => { const f = zip.file(p); return f ? f.async('string') : null; };
+    const wb = parse(await txt('xl/workbook.xml'));
+    const rels = parse(await txt('xl/_rels/workbook.xml.rels'));
+    const relMap = {}; els(rels, 'Relationship').forEach((r) => { relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
+    const ss = []; const ssx = await txt('xl/sharedStrings.xml');
+    if (ssx) els(parse(ssx), 'si').forEach((si) => ss.push(els(si, 't').map((t) => t.textContent).join('')));
+    // Thema-kleuren
+    const theme = []; const thx = await txt('xl/theme/theme1.xml');
+    if (thx) {
+      const cs = els(parse(thx), 'clrScheme')[0];
+      if (cs) ['dk1', 'lt1', 'dk2', 'lt2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink'].forEach((n) => {
+        const e = els(cs, n)[0]; if (!e) { theme.push(null); return; }
+        const s = els(e, 'srgbClr')[0], sys = els(e, 'sysClr')[0];
+        theme.push(s ? s.getAttribute('val') : sys ? sys.getAttribute('lastClr') : null);
+      });
+    }
+    // Excel wisselt thema 0/1 en 2/3 om
+    const themeColor = (i) => { const map = [1, 0, 3, 2]; const idx = i < 4 ? map[i] : i; return theme[idx] || null; };
+    const st = parse(await txt('xl/styles.xml'));
+    const fills = els(els(st, 'fills')[0], 'fill').map((f) => {
+      const p = els(f, 'patternFill')[0]; if (!p || (p.getAttribute('patternType') || 'none') === 'none') return null;
+      const fg = els(p, 'fgColor')[0]; if (!fg) return null;
+      let rgb = null;
+      if (fg.getAttribute('rgb')) rgb = hexToRgb(fg.getAttribute('rgb'));
+      else if (fg.getAttribute('theme') !== null) { const h = themeColor(Number(fg.getAttribute('theme'))); if (h) rgb = hexToRgb(h); }
+      if (rgb && fg.getAttribute('tint')) rgb = tintRgb(rgb, Number(fg.getAttribute('tint')));
+      return rgb;
+    });
+    const xfs = els(els(st, 'cellXfs')[0], 'xf').map((x) => Number(x.getAttribute('fillId') || 0));
+
+    const sheets = [];
+    for (const s of els(wb, 'sheet')) {
+      const rid = s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || s.getAttribute('r:id');
+      let target = relMap[rid]; if (!target) continue;
+      target = target.replace(/^\/?xl\//, '').replace(/^\//, '');
+      const x = await txt('xl/' + target); if (!x) continue;
+      const doc = parse(x); const cells = new Map(); let maxR = 0;
+      els(doc, 'c').forEach((c) => {
+        const ref = colIdx(c.getAttribute('r')); const t = c.getAttribute('t'); const vEl = els(c, 'v')[0];
+        let v = null;
+        if (t === 's' && vEl) v = ss[Number(vEl.textContent)];
+        else if (t === 'inlineStr') v = els(c, 't').map((e) => e.textContent).join('');
+        else if (t === 'str' && vEl) v = vEl.textContent;
+        else if (t === 'b' && vEl) v = vEl.textContent === '1';
+        else if (vEl) v = Number(vEl.textContent);
+        const fill = fills[xfs[Number(c.getAttribute('s') || 0)]] || null;
+        cells.set(ref.r + ':' + ref.c, { v, fill });
+        if (ref.r > maxR) maxR = ref.r;
+      });
+      sheets.push({ name: s.getAttribute('name'), get: (r, c) => cells.get(r + ':' + c) || { v: null, fill: null }, maxR });
+    }
+    return { sheets, classify };
+  }
+  return { read };
+})();
+
+/* ===== Weekbladen omzetten naar diensten en meldingen ===== */
+function extract(book) {
+  const { sheets, classify } = book;
+  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0 };
+  const laagwater = new Set();
+  const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
+  const parseDateText = (s) => { const m = /(\d{1,2})-(\d{1,2})-(\d{4})/.exec(s || ''); if (!m) return null; const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])); return isNaN(d) || d.getUTCDate() !== +m[1] ? null : d; };
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const str = (v) => (v == null ? '' : String(v).trim());
+  const isNum = (v) => typeof v === 'number' && !isNaN(v);
+
+  for (const sh of sheets) {
+    const m = /week\s*(\d+)/i.exec(sh.name); if (!m) continue;
+    const week = Number(m[1]);
+    // Kopregel zoeken
+    let head = 0;
+    for (let r = 1; r <= Math.min(10, sh.maxR); r++) { if (/datum/i.test(str(sh.get(r, 1).v)) && /dienst/i.test(str(sh.get(r, 2).v))) { head = r; break; } }
+    if (!head) continue;
+    for (let r = 1; r < head; r++) if (/laagwater/i.test(str(sh.get(r, 1).v))) laagwater.add(week);
+    let prev = null;
+    let r = head + 1;
+    for (; r <= sh.maxR; r++) {
+      const a = sh.get(r, 1).v; const dienstRaw = str(sh.get(r, 2).v);
+      if (/totaal/i.test(str(a))) break;
+      if (!dienstRaw) { if (!str(a)) { if (diensten.length && r > head + 16) break; continue; } else break; }
+      const dienst = /^n/i.test(dienstRaw) ? 'Nacht' : 'Dag';
+      let d = null;
+      if (isNum(a)) d = serialToDate(a); else if (a) d = parseDateText(str(a));
+      if (dienst === 'Dag') {
+        if (!d || (prev && (d - prev) / 86400000 !== 1 && (d - prev) !== 0)) { if (prev && (!d || Math.abs((d - prev) / 86400000) > 3)) { d = new Date(prev.getTime() + 86400000); issues.datum++; } }
+        if (!d) continue;
+        prev = d;
+      } else { if (d && prev && iso(d) !== iso(prev)) issues.datum++; d = prev || d; if (!d) continue; }
+      const col = (c) => sh.get(r, c).v;
+      const num = (c) => (isNum(col(c)) ? col(c) : 0);
+      const vt = col(12); const hw = col(13); const np = col(11);
+      if (!isNum(vt)) issues.vaartijdX++;
+      if (str(hw) && !isNum(hw)) issues.herwerkTekst++;
+      diensten.push({ week, datum: iso(d), dienst, beleving: classify(sh.get(r, 3).fill),
+        ongeval: num(4), onveilig: num(5), verbeteridee: num(6), defecte_draad: num(7), personeel: isNum(col(8)) ? col(8) : (str(col(8)) ? 1 : 0),
+        fout_gekoppeld: num(9), gebrekkig_onderhoud: num(10), nieuwe_planningen: num(11) || (str(np) && !isNum(np) && !/^x$/i.test(str(np)) ? 1 : 0),
+        vaartijd: isNum(vt) ? vt : null, herwerk: isNum(hw) ? hw : 0, herwerk_opm: str(hw) && !isNum(hw) && !/^x$/i.test(str(hw)) ? 1 : 0 });
+    }
+    // Oorzaken en extra opmerkingen
+    let mode = null; let lastMelding = null; let conclBuf = null;
+    for (r = r + 1; r <= sh.maxR; r++) {
+      const texts = [1, 2, 3, 4].map((c) => sh.get(r, c).v).map((v, i) => ({ v, s: str(v), c: i + 1 }));
+      const joined = texts.map((t) => t.s).filter(Boolean).join(' ');
+      if (!joined) { if (mode === 'extra') mode = null; continue; }
+      if (/oorzaken oranje/i.test(joined)) { mode = 'oorzaak'; continue; }
+      if (/^datum\b/i.test(texts[0].s) && /reden/i.test(joined)) continue;
+      if (/mogelijke verbeteractie/i.test(joined)) { mode = null; continue; }
+      if (/conclusie/i.test(joined)) {
+        const after = joined.replace(/^.*?conclusie\s*:?\s*/i, '').trim();
+        conclBuf = { week, tekst: after }; conclusies.push(conclBuf); mode = 'concl'; continue;
+      }
+      if (mode === 'concl') { conclBuf.tekst = (conclBuf.tekst + ' ' + joined).trim(); continue; }
+      if (/^extra (algemene )?opmerking|^opmerking na dienst/i.test(texts[0].s)) {
+        const dm = parseDateText(texts[0].s) || (/(\d{1,2})-(\d{1,2})/.exec(texts[0].s) ? (() => { const x = /(\d{1,2})-(\d{1,2})/.exec(texts[0].s); return new Date(Date.UTC(2026, +x[2] - 1, +x[1])); })() : null);
+        const dienst = /nacht/i.test(texts[0].s) ? 'Nacht' : 'Dag';
+        const rest = texts[0].s.replace(/^[^:]*:\s*/, '');
+        lastMelding = { week, datum: dm ? iso(dm) : null, dienst, melding: rest };
+        meldingen.push(lastMelding); mode = 'extra'; continue;
+      }
+      if (/^evaluatie gebruik ipad/i.test(texts[0].s)) { mode = null; continue; }
+      if (mode === 'extra' && lastMelding) { lastMelding.melding = (lastMelding.melding + ' ' + joined).trim(); continue; }
+      if (mode === 'oorzaak') {
+        const a = sh.get(r, 1).v; const reden = texts.slice(2).map((t) => t.s).filter(Boolean).join(' ') || (texts[1].s && !/^(dag|nacht)/i.test(texts[1].s) ? texts[1].s : '');
+        let d = isNum(a) ? serialToDate(a) : parseDateText(str(a));
+        if (!d && /^\d{1,2}-\d{1,2}$/.test(str(a))) { const x = str(a).split('-'); d = new Date(Date.UTC(2026, +x[1] - 1, +x[0])); }
+        if (!d && !str(a) && !texts[1].s && lastMelding && lastMelding.week === week) { lastMelding.melding += ' ' + reden; continue; }
+        if (!reden) continue;
+        lastMelding = { week, datum: d ? iso(d) : null, dienst: /nacht/i.test(texts[1].s) ? 'Nacht' : 'Dag', melding: reden };
+        meldingen.push(lastMelding);
+      }
+    }
+  }
+  // Meldingen zonder datum krijgen de eerste dag van hun week
+  meldingen.forEach((m) => { if (!m.datum) { const d = diensten.find((x) => x.week === m.week); m.datum = d ? d.datum : ''; } m.melding = m.melding.replace(/\s+/g, ' ').trim(); });
+  // Thema's en partijen
+  meldingen.forEach((m, i) => {
+    m.nr = i + 1;
+    const t = ' ' + m.melding.toLowerCase() + ' ';
+    m.themas = THEMAS.filter((th) => th.woorden.some((w) => (w instanceof RegExp ? w.test(t) : t.includes(w)))).map((th) => th.code);
+    m.partijen = PARTIJEN.filter((p) => p.re.test(m.melding)).map((p) => p.naam);
+  });
+  return { diensten, meldingen, conclusies, issues, laagwater };
+}
+
+/* ===== Dashboard tekenen ===== */
+const nl = d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['€', ''] });
+const F = { pct: nl.format('.0%'), int: nl.format(',.0f'), dec1: nl.format(',.1f') };
+const $ = (id) => document.getElementById(id);
+const S = { data: null, van: null, tot: null, dienst: '', thema: null, zoek: '' };
+const thNaam = (c) => (THEMAS.find((t) => t.code === c) || {}).naam || c;
+const BCOL = { Groen: 'var(--ok)', Oranje: 'var(--warn)', Rood: 'var(--bad)', 'Geen overdracht': 'var(--none)' };
+const BKEYS = ['Groen', 'Oranje', 'Rood', 'Geen overdracht'];
+
+function tipFor(box) {
+  let t = box.querySelector(':scope > .tip');
+  if (!t) { t = document.createElement('div'); t.className = 'tip'; t.hidden = true; box.appendChild(t); }
+  return {
+    show(ev, head, lines) {
+      t.replaceChildren(); const h = document.createElement('div'); h.className = 'h'; h.textContent = head; t.appendChild(h);
+      lines.forEach(([c, l, v]) => { const r = document.createElement('div'); r.className = 'r'; if (c) { const s = document.createElement('span'); s.className = 'sw'; s.style.background = c; r.appendChild(s); } const a = document.createElement('span'); a.textContent = l + ': '; const b = document.createElement('b'); b.textContent = v; r.append(a, b); t.appendChild(r); });
+      t.hidden = false; const bb = box.getBoundingClientRect();
+      let x = ev.clientX - bb.left + 12, y = ev.clientY - bb.top - t.offsetHeight - 8;
+      if (x + t.offsetWidth > bb.width) x = Math.max(0, ev.clientX - bb.left - t.offsetWidth - 12); if (y < 0) y = ev.clientY - bb.top + 14;
+      t.style.left = x + 'px'; t.style.top = y + 'px';
+    },
+    hide() { t.hidden = true; }
+  };
+}
+const statsOf = (rs) => {
+  const met = rs.filter((r) => ['Groen', 'Oranje', 'Rood'].includes(r.beleving));
+  const vt = rs.filter((r) => r.vaartijd != null);
+  const n = (b) => rs.filter((r) => r.beleving === b).length;
+  return { n: rs.length, met: met.length, groen: n('Groen'), oranje: n('Oranje'), rood: n('Rood'), geen: n('Geen overdracht'),
+    pct: met.length ? met.filter((r) => r.beleving !== 'Groen').length / met.length : null,
+    vaart: vt.length ? d3.mean(vt, (r) => r.vaartijd) : null };
+};
+
+function render() {
+  const D = S.data; if (!D) return;
+  const inRange = (w) => w >= S.van && w <= S.tot;
+  const dien = D.diensten.filter((r) => inRange(r.week) && (!S.dienst || r.dienst === S.dienst));
+  const meld = D.meldingen.filter((m) => inRange(m.week) && (!S.dienst || m.dienst === S.dienst));
+  const st = statsOf(dien);
+  const som = (k) => d3.sum(dien, (r) => r[k] || 0);
+  $('k-diensten').textContent = F.int(st.n);
+  $('k-pct').textContent = st.pct == null ? '—' : F.pct(st.pct);
+  $('k-rood').textContent = F.int(st.rood);
+  $('k-vaart').textContent = st.vaart == null ? '—' : F.dec1(st.vaart) + ' u';
+  $('k-geen').textContent = F.int(st.geen);
+  $('k-veilig').textContent = F.int(som('ongeval') + som('onveilig'));
+
+  const themaCount = THEMAS.map((t) => ({ code: t.code, naam: t.naam, aantal: meld.filter((m) => m.themas.includes(t.code)).length })).sort((a, b) => b.aantal - a.aantal);
+  const top = themaCount[0];
+  $('lede').textContent = (st.pct == null ? '' : `Van de diensten met een overdracht was ${F.pct(st.pct)} oranje of rood. `) + (top && top.aantal ? `Meest genoemde oorzaak: ${top.naam.toLowerCase()} (${F.int(top.aantal)} meldingen).` : '');
+
+  // Per week
+  const weeks = d3.range(S.van, S.tot + 1).filter((w) => D.diensten.some((r) => r.week === w));
+  const perWeek = weeks.map((w) => { const rs = dien.filter((r) => r.week === w); const s = statsOf(rs); return { week: w, ...s, onderhoud: d3.sum(rs, (r) => r.gebrekkig_onderhoud), planningen: d3.sum(rs, (r) => r.nieuwe_planningen), fout: d3.sum(rs, (r) => r.fout_gekoppeld), herwerk: d3.sum(rs, (r) => r.herwerk) }; });
+  drawWeek($('c-week'), perWeek, D.laagwater);
+  drawDN($('c-dn'), D.diensten.filter((r) => inRange(r.week)));
+  drawPhases(D, dien, meld);
+  drawHBar($('c-thema'), themaCount.map((t) => ({ key: t.code, label: t.naam, aantal: t.aantal })), true);
+  const pc = PARTIJEN.map((p) => ({ key: p.naam, label: p.naam, aantal: meld.filter((m) => m.partijen.includes(p.naam)).length })).filter((p) => p.aantal).sort((a, b) => b.aantal - a.aantal);
+  drawHBar($('c-partij'), pc, false);
+  drawHeat($('c-heat'), meld, weeks, themaCount);
+  drawRanking(meld);
+  drawMinis(perWeek);
+  drawChips(); drawMeldingen();
+  drawConclusies(D.conclusies.filter((c) => inRange(c.week)));
+  const dq = $('dq'); dq.replaceChildren();
+  [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
+    .filter(([, n]) => n > 0).forEach(([t]) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
+  if (!dq.children.length) { const li = document.createElement('li'); li.textContent = 'Niets bijzonders gevonden.'; dq.appendChild(li); }
+}
+
+function axisClean(g) { g.attr('font-size', null).attr('font-family', null); g.select('.domain').style('stroke', 'var(--axis)'); }
+
+function drawWeek(el, rows, laag) {
+  el.replaceChildren(); if (!rows.length) return;
+  const W = Math.max(300, el.clientWidth), H = 270, m = { t: 12, r: 8, b: 28, l: 28 };
+  const x = d3.scaleBand(rows.map((r) => r.week), [m.l, W - m.r]).padding(0.22);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => r.n) || 1], [H - m.b, m.t]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  const lw = rows.filter((r) => laag.has(r.week));
+  if (lw.length) {
+    const pad = x.step() * x.padding() / 2; const x0 = x(lw[0].week) - pad, x1 = x(lw[lw.length - 1].week) + x.bandwidth() + pad;
+    svg.append('rect').attr('x', x0).attr('y', m.t).attr('width', x1 - x0).attr('height', H - m.b - m.t).style('fill', 'var(--accent-soft)').style('opacity', .6);
+    svg.append('text').attr('x', (x0 + x1) / 2).attr('y', m.t + 12).attr('text-anchor', 'middle').text('Laagwater');
+  }
+  const keyMap = { Groen: 'groen', Oranje: 'oranje', Rood: 'rood', 'Geen overdracht': 'geen' };
+  const stack = d3.stack().keys(BKEYS).value((d, k) => d[keyMap[k]])(rows);
+  svg.append('g').selectAll('g').data(stack).join('g').style('fill', (s) => BCOL[s.key]).selectAll('rect').data((s) => s).join('rect')
+    .attr('x', (d) => x(d.data.week)).attr('width', x.bandwidth()).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - 1)).attr('rx', 1.5);
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => x.step() > 26 || i % 2 === 0)).tickFormat((w) => 'wk ' + w)).call(axisClean);
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6)).call(axisClean).call((g) => g.select('.domain').remove());
+  const t = tipFor(el);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
+    .on('pointermove', (ev, r) => t.show(ev, 'Week ' + r.week, [...BKEYS.map((k) => [BCOL[k], k, F.int(r[keyMap[k]])]), [null, 'Oranje of rood', r.pct == null ? '–' : F.pct(r.pct)]])).on('pointerleave', () => t.hide());
+}
+
+function drawDN(el, all) {
+  el.replaceChildren();
+  const rows = ['Dag', 'Nacht'].map((d) => ({ dienst: d, ...statsOf(all.filter((r) => r.dienst === d)) }));
+  const W = Math.max(260, el.clientWidth), rowH = 50, H = rows.length * rowH + 4, lab = 52, right = 82;
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear([0, 1], [lab, W - right]); const t = tipFor(el);
+  rows.forEach((r, i) => {
+    const tot = r.groen + r.oranje + r.rood; let acc = 0; const y0 = i * rowH + 4;
+    svg.append('text').attr('class', 'lbl').attr('x', 0).attr('y', y0 + 15).text(r.dienst);
+    [['Groen', r.groen], ['Oranje', r.oranje], ['Rood', r.rood]].forEach(([k, v]) => {
+      const w = tot ? v / tot : 0;
+      svg.append('rect').attr('x', x(acc)).attr('y', y0).attr('width', Math.max(0, x(acc + w) - x(acc) - 1)).attr('height', 22).attr('rx', 2).style('fill', BCOL[k])
+        .on('pointermove', (ev) => t.show(ev, r.dienst + 'dienst', [[BCOL[k], k, F.int(v) + ' (' + F.pct(w) + ')']])).on('pointerleave', () => t.hide());
+      acc += w;
+    });
+    svg.append('text').attr('class', 'val').attr('x', W - right + 8).attr('y', y0 + 15).text(r.vaart == null ? '' : F.dec1(r.vaart) + ' u vaart');
+    svg.append('text').attr('x', lab).attr('y', y0 + 38).text(r.pct == null ? '' : F.pct(r.pct) + ' oranje of rood');
+  });
+  const [dg, nc] = rows;
+  $('dn-text').textContent = dg.pct != null && nc.pct != null ? (dg.pct > nc.pct ? `De dagdienst is vaker oranje of rood (${F.pct(dg.pct)}) dan de nachtdienst (${F.pct(nc.pct)}).` : `De nachtdienst is vaker oranje of rood (${F.pct(nc.pct)}) dan de dagdienst (${F.pct(dg.pct)}).`) : '';
+}
+
+function drawPhases(D, dien, meld) {
+  const box = $('phases'); box.replaceChildren();
+  const lw = [...D.laagwater].sort((a, b) => a - b);
+  $('phase-card').hidden = !lw.length; if (!lw.length) return;
+  const fase = (w) => (w < lw[0] ? 'Voor de laagwaterperiode' : (w <= lw[lw.length - 1] ? 'Laagwaterperiode' : 'Na de laagwaterperiode'));
+  ['Voor de laagwaterperiode', 'Laagwaterperiode', 'Na de laagwaterperiode'].forEach((f) => {
+    const rs = dien.filter((r) => fase(r.week) === f); if (!rs.length) return;
+    const ms = meld.filter((m) => fase(m.week) === f); const s = statsOf(rs);
+    const top = THEMAS.map((t) => ({ naam: t.naam, n: ms.filter((m) => m.themas.includes(t.code)).length })).sort((a, b) => b.n - a.n)[0];
+    const div = document.createElement('div'); div.className = 'phase';
+    const h = document.createElement('h4'); h.textContent = f + ` (wk ${d3.min(rs, (r) => r.week)}–${d3.max(rs, (r) => r.week)})`;
+    const p1 = document.createElement('p'); const big = document.createElement('span'); big.className = 'big'; big.textContent = s.pct == null ? '—' : F.pct(s.pct); p1.append(big, ' oranje of rood');
+    const p2 = document.createElement('p'); p2.textContent = 'Vaartijd gemiddeld ' + (s.vaart == null ? '—' : F.dec1(s.vaart)) + ' uur';
+    const p3 = document.createElement('p'); p3.textContent = 'Vaakst genoemd: ' + (top && top.n ? top.naam : '—');
+    div.append(h, p1, p2, p3); box.appendChild(div);
+  });
+}
+
+function drawHBar(el, rows, clickable) {
+  el.replaceChildren(); if (!rows.length) { el.textContent = 'Geen meldingen in deze periode.'; el.className = 'chart empty'; return; } el.className = 'chart';
+  const W = Math.max(260, el.clientWidth), rowH = 28, H = rows.length * rowH + 4;
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const tmp = svg.append('text').attr('class', 'lbl'); const lw = Math.min(W * .55, d3.max(rows, (r) => { tmp.text(r.label); return tmp.node().getComputedTextLength(); }) + 12); tmp.remove();
+  const x = d3.scaleLinear([0, d3.max(rows, (r) => r.aantal) || 1], [lw, W - 34]);
+  const g = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (r, i) => `translate(0,${i * rowH})`);
+  if (clickable) g.attr('class', 'click').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (r) => 'Filter meldingen op ' + r.label)
+    .on('click', (ev, r) => pickThema(r.key, true)).on('keydown', (ev, r) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickThema(r.key, true); } });
+  g.append('text').attr('class', 'lbl').attr('x', 0).attr('y', 17).text((r) => r.label);
+  g.append('rect').attr('x', lw).attr('y', 6).attr('height', 16).attr('rx', 2).attr('width', (r) => Math.max(1, x(r.aantal) - lw))
+    .style('fill', (r, i) => (clickable && S.thema ? (r.key === S.thema ? 'var(--accent)' : 'var(--axis)') : (i < 3 ? 'var(--accent)' : 'var(--axis)')));
+  g.append('text').attr('class', 'val').attr('x', (r) => x(r.aantal) + 6).attr('y', 18).text((r) => F.int(r.aantal));
+}
+
+function drawHeat(el, meld, weeks, order) {
+  el.replaceChildren(); if (!weeks.length) return;
+  const themas = order.map((o) => o.code);
+  const cells = []; themas.forEach((c) => weeks.forEach((w) => cells.push({ code: c, week: w, n: meld.filter((m) => m.week === w && m.themas.includes(c)).length })));
+  const box = document.createElement('div'); box.style.overflowX = 'auto'; el.appendChild(box);
+  const svg = d3.select(box).append('svg');
+  const tmp = svg.append('text').attr('class', 'lbl'); const lw = d3.max(themas, (c) => { tmp.text(thNaam(c)); return tmp.node().getComputedTextLength(); }) + 12; tmp.remove();
+  const W = Math.max(520, el.clientWidth); const cell = Math.max(20, Math.min(40, (W - lw) / weeks.length)); const H = themas.length * cell + 26; const TW = lw + weeks.length * cell;
+  svg.attr('width', TW).attr('height', H).attr('viewBox', `0 0 ${TW} ${H}`);
+  const max = d3.max(cells, (c) => c.n) || 1; const t = tipFor(el);
+  svg.append('g').selectAll('text').data(themas).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (c, i) => i * cell + cell / 2 + 4).text(thNaam);
+  svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + 1).attr('y', (c) => themas.indexOf(c.code) * cell + 1)
+    .attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2).style('fill', (c) => (c.n ? 'var(--accent)' : 'var(--grid)')).style('fill-opacity', (c) => (c.n ? .25 + .75 * c.n / max : 1))
+    .on('pointermove', (ev, c) => t.show(ev, 'Week ' + c.week, [[null, thNaam(c.code), F.int(c.n) + (c.n === 1 ? ' melding' : ' meldingen')]])).on('pointerleave', () => t.hide());
+  svg.append('g').selectAll('text').data(cells.filter((c) => c.n)).join('text').attr('class', 'val').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + cell / 2).attr('y', (c) => themas.indexOf(c.code) * cell + cell / 2 + 4)
+    .attr('text-anchor', 'middle').style('fill', 'var(--bg)').style('pointer-events', 'none').text((c) => c.n);
+  svg.append('g').selectAll('text').data(weeks).join('text').attr('x', (w, i) => lw + i * cell + cell / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((w, i) => (cell >= 26 || i % 2 === 0 ? w : ''));
+}
+
+function drawRanking(meld) {
+  const rows = OPLOSSINGEN.map((o) => ({ ...o, geraakt: meld.filter((m) => m.themas.some((c) => o.themas.includes(c))).length }))
+    .sort((a, b) => b.geraakt - a.geraakt || b.weken.length - a.weken.length);
+  const max = d3.max(rows, (r) => r.geraakt) || 1; const tb = $('t-opl'); tb.replaceChildren();
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; tr.appendChild(c); return c; };
+    td(i + 1, 'rank'); td(r.oplossing, 'strong'); td(r.toelichting, 'wrapc');
+    const c = document.createElement('td'); r.themas.forEach((k) => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = thNaam(k); c.appendChild(s); }); tr.appendChild(c);
+    const b = document.createElement('td'); const bar = document.createElement('div'); bar.className = 'bar' + (i < 3 ? ' top' : ''); const ii = document.createElement('i'); ii.style.width = (5 * r.geraakt / max) + 'rem'; const n = document.createElement('span'); n.textContent = F.int(r.geraakt); bar.append(ii, n); b.appendChild(bar); tr.appendChild(b);
+    const w = td(F.int(r.weken.length), 'num'); w.title = 'Week ' + r.weken.join(', ');
+    td(r.soort, 'soort-' + r.soort);
+    tb.appendChild(tr);
+  });
+}
+
+function drawMinis(rows) {
+  const box = $('minis'); box.replaceChildren();
+  const defs = [['Gebrekkig onderhoud', 'onderhoud', F.int, false], ['Nieuwe planningen', 'planningen', F.int, false], ['Fout gekoppelde bakken', 'fout', F.int, false], ['Herwerk (geteld)', 'herwerk', F.int, false], ['Actieve vaartijd (gem. uur)', 'vaart', (v) => F.dec1(v) + ' u', true]];
+  defs.forEach(([title, key, f, line]) => {
+    const card = document.createElement('div'); card.className = 'card';
+    const h = document.createElement('h3'); h.textContent = title; const p = document.createElement('p'); p.className = 'note';
+    p.textContent = line ? 'Gemiddeld ' + (d3.mean(rows.filter((r) => r[key] != null), (r) => r[key]) == null ? '—' : F.dec1(d3.mean(rows.filter((r) => r[key] != null), (r) => r[key]))) + ' uur' : 'Totaal ' + F.int(d3.sum(rows, (r) => r[key] || 0));
+    const el = document.createElement('div'); el.className = 'chart'; card.append(h, p, el); box.appendChild(card);
+    if (!rows.length) return;
+    const W = Math.max(240, el.clientWidth), H = 112, m = { t: 16, r: 6, b: 20, l: 6 };
+    const x = d3.scaleBand(rows.map((r) => r.week), [m.l, W - m.r]).padding(.25);
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r[key] || 0) || 1], [H - m.b, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--axis)');
+    if (line) {
+      const pts = rows.filter((r) => r[key] != null);
+      svg.append('path').datum(pts).attr('d', d3.line().x((r) => x(r.week) + x.bandwidth() / 2).y((r) => y(r[key]))).style('fill', 'none').style('stroke', 'var(--accent)').style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
+      svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (r) => x(r.week) + x.bandwidth() / 2).attr('cy', (r) => y(r[key])).attr('r', 2.5).style('fill', 'var(--accent)');
+    } else {
+      svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week)).attr('width', x.bandwidth()).attr('y', (r) => y(r[key] || 0)).attr('height', (r) => H - m.b - y(r[key] || 0)).attr('rx', 1.5).style('fill', 'var(--accent)');
+    }
+    const top = rows.reduce((a, r) => ((r[key] || 0) > (a[key] || 0) ? r : a), rows[0]);
+    if (top[key]) svg.append('text').attr('class', 'val').attr('x', Math.min(W - 44, Math.max(m.l, x(top.week) - 4))).attr('y', y(top[key]) - 4).text(f(top[key]));
+    svg.append('text').attr('x', m.l).attr('y', H - 4).text('wk ' + rows[0].week);
+    svg.append('text').attr('x', W - m.r).attr('y', H - 4).attr('text-anchor', 'end').text('wk ' + rows[rows.length - 1].week);
+    const t = tipFor(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
+      .on('pointermove', (ev, r) => t.show(ev, 'Week ' + r.week, [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
+  });
+}
+
+function pickThema(code, scroll) {
+  S.thema = S.thema === code ? null : code; render();
+  if (scroll) $('meldingen').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+function drawChips() {
+  const box = $('chips'); box.replaceChildren();
+  [[null, 'Alle thema’s'], ...THEMAS.map((t) => [t.code, t.naam])].forEach(([c, n]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = n; b.setAttribute('aria-pressed', String(S.thema === c));
+    b.addEventListener('click', () => { S.thema = c; render(); }); box.appendChild(b);
+  });
+}
+function drawMeldingen() {
+  const D = S.data; const q = S.zoek.trim().toLowerCase();
+  const rows = D.meldingen.filter((m) => m.week >= S.van && m.week <= S.tot && (!S.dienst || m.dienst === S.dienst) && (!S.thema || m.themas.includes(S.thema))
+    && (!q || [m.melding, m.partijen.join(' '), m.themas.map(thNaam).join(' '), m.datum, m.dienst].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => (a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0));
+  $('n-meld').textContent = F.int(rows.length);
+  const tb = $('t-meld'); tb.replaceChildren(); const df = d3.utcFormat('%d-%m-%Y');
+  rows.forEach((m) => {
+    const tr = document.createElement('tr'); const td = (t, c) => { const x = document.createElement('td'); if (c) x.className = c; x.textContent = t; tr.appendChild(x); return x; };
+    td(m.datum ? df(new Date(m.datum)) : '', 'num'); td(m.dienst); td(m.melding, 'wrapc');
+    const c = document.createElement('td'); (m.themas.length ? m.themas.map(thNaam) : ['Overig']).forEach((n) => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = n; c.appendChild(s); }); tr.appendChild(c);
+    td(m.partijen.join(', ')); tb.appendChild(tr);
+  });
+}
+function drawConclusies(list) {
+  const box = $('concl'); box.replaceChildren();
+  const items = list.filter((c) => c.tekst).sort((a, b) => b.week - a.week);
+  $('conclusies').hidden = !items.length;
+  items.forEach((c, i) => { const d = document.createElement('details'); if (i === 0) d.open = true; const s = document.createElement('summary'); s.textContent = 'Week ' + c.week; const p = document.createElement('p'); p.textContent = c.tekst; d.append(s, p); box.appendChild(d); });
+}
+
+/* ===== Laden en bediening ===== */
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
+async function load(buf, naam) {
+  try {
+    setStatus('Bezig met inlezen…');
+    const data = extract(await XLSX_READER.read(buf));
+    if (!data.diensten.length) throw new Error('Geen weekbladen gevonden. Klopt het dat de bladen "Week NN 2026" heten?');
+    S.data = data;
+    const weeks = [...new Set(data.diensten.map((r) => r.week))].sort((a, b) => a - b);
+    S.van = weeks[0]; S.tot = weeks[weeks.length - 1]; S.thema = null;
+    ['f-van', 'f-tot'].forEach((id) => { const sel = $(id); sel.replaceChildren(...weeks.map((w) => new Option(String(w), String(w)))); });
+    $('f-van').value = String(S.van); $('f-tot').value = String(S.tot);
+    $('filters').hidden = false; $('dash').hidden = false;
+    setStatus(`${naam}: ${F.int(data.diensten.length)} diensten en ${F.int(data.meldingen.length)} meldingen ingelezen, week ${S.van} t/m ${S.tot}.`);
+    render();
+  } catch (e) { console.error(e); setStatus('Het bestand kon niet worden ingelezen: ' + e.message, true); }
+}
+$('pick').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) load(await f.arrayBuffer(), f.name); });
+const drop = $('drop');
+['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('drag'); }));
+drop.addEventListener('drop', async (e) => { const f = e.dataTransfer.files[0]; if (f) load(await f.arrayBuffer(), f.name); });
+$('f-van').addEventListener('change', (e) => { S.van = Number(e.target.value); if (S.van > S.tot) { S.tot = S.van; $('f-tot').value = e.target.value; } render(); });
+$('f-tot').addEventListener('change', (e) => { S.tot = Number(e.target.value); if (S.tot < S.van) { S.van = S.tot; $('f-van').value = e.target.value; } render(); });
+$('f-dienst').addEventListener('change', (e) => { S.dienst = e.target.value; render(); });
+$('f-reset').addEventListener('click', () => { const w = [...new Set(S.data.diensten.map((r) => r.week))].sort((a, b) => a - b); S.van = w[0]; S.tot = w[w.length - 1]; S.dienst = ''; $('f-van').value = String(S.van); $('f-tot').value = String(S.tot); $('f-dienst').value = ''; render(); });
+$('zoek').addEventListener('input', (e) => { S.zoek = e.target.value; drawMeldingen(); });
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+// Automatisch laden als het bestand in de repo staat
+if (location.protocol.startsWith('http')) fetch(AUTO_BESTAND, { cache: 'no-store' }).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => { if (b) load(b, AUTO_BESTAND); }).catch(() => {});
+</script>
+</body>
+</html>
