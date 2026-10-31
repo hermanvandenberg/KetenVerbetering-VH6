@@ -12,11 +12,11 @@ Het Excel wordt alleen in je eigen browser gelezen. Er wordt niets geüpload of 
 
 ## Wat het Excel moet bevatten
 
-- Eén blad per week met in de naam `Week NN`, bijvoorbeeld `Week 44 2026`.
+- Eén blad per week met in de naam `Week NN JJJJ`, bijvoorbeeld `Week 44 2026`. Het jaartal zorgt ervoor dat week 1 van het nieuwe jaar na week 52 komt. Staat een week twee keer in het bestand (bijv. een gekopieerd blad `Week 44 2026 (2)`), dan telt alleen het eerste blad en meldt het dashboard dat.
 - Bovenaan de tabel met kopregel `Datum | Dienst | Beleving | ...` en daaronder dag- en nachtdiensten tot de regel `Totaal`.
 - De beleving als celkleur in kolom C: groen, oranje, rood, of roze voor "geen overdracht ontvangen".
 - Daaronder het kopje `Oorzaken oranje/rode diensten` met per regel datum, dienst en reden.
-- Regels die beginnen met `Extra opmerking` worden ook als melding meegenomen.
+- Regels die beginnen met `Extra opmerking` worden ook als melding meegenomen. Staat er geen dag- of nachtdienst in, dan telt de opmerking als algemeen en blijft hij bij beide dienstfilters zichtbaar.
 - Een tekst met `Conclusie` komt in het overzicht "Conclusies per week".
 - Staat er `Laagwaterperiode` boven de tabel, dan telt die week als laagwaterperiode.
 

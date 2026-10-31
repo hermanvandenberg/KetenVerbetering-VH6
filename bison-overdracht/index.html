@@ -317,7 +317,7 @@ const XLSX_READER = (() => {
     const rels = parse(await txt('xl/_rels/workbook.xml.rels'));
     const relMap = {}; els(rels, 'Relationship').forEach((r) => { relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
     const ss = []; const ssx = await txt('xl/sharedStrings.xml');
-    if (ssx) els(parse(ssx), 'si').forEach((si) => ss.push(els(si, 't').map((t) => t.textContent).join('')));
+    if (ssx) els(parse(ssx), 'si').forEach((si) => ss.push(els(si, 't').filter((t) => t.parentNode.localName !== 'rPh').map((t) => t.textContent).join('')));
     // Thema-kleuren
     const theme = []; const thx = await txt('xl/theme/theme1.xml');
     if (thx) {
@@ -371,7 +371,8 @@ const XLSX_READER = (() => {
 /* ===== Weekbladen omzetten naar diensten en meldingen ===== */
 function extract(book) {
   const { sheets, classify } = book;
-  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0 };
+  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [] };
+  const gezien = new Map(); let laatsteJaar = null;
   const laagwater = new Set();
   const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
   const parseDateText = (s) => { const m = /(\d{1,2})-(\d{1,2})-(\d{4})/.exec(s || ''); if (!m) return null; const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])); return isNaN(d) || d.getUTCDate() !== +m[1] ? null : d; };
@@ -380,8 +381,14 @@ function extract(book) {
   const isNum = (v) => typeof v === 'number' && !isNaN(v);
 
   for (const sh of sheets) {
-    const m = /week\s*(\d+)/i.exec(sh.name); if (!m) continue;
-    const week = Number(m[1]);
+    const m = /week\s*(\d+)(?:\D+(\d{4}))?/i.exec(sh.name); if (!m) continue;
+    const weekNr = Number(m[1]); const jaar = m[2] ? Number(m[2]) : (laatsteJaar || new Date().getFullYear()); laatsteJaar = jaar;
+    // Weeksleutel jaar*100+week, zodat week 1 van het volgende jaar na week 52 komt
+    const week = jaar * 100 + weekNr;
+    if (gezien.has(week)) { issues.dubbel.push(`Blad '${sh.name}' is overgeslagen: week ${weekNr} staat al in blad '${gezien.get(week)}'.`); continue; }
+    gezien.set(week, sh.name);
+    // Datum zonder jaartal (dd-mm): jaar van het blad, rond de jaarwisseling het jaar ervoor of erna
+    const ddmm = (dd, mm) => { let y = jaar; if (weekNr <= 2 && mm === 12) y--; else if (weekNr >= 51 && mm === 1) y++; return new Date(Date.UTC(y, mm - 1, dd)); };
     // Kopregel zoeken
     let head = 0;
     for (let r = 1; r <= Math.min(10, sh.maxR); r++) { if (/datum/i.test(str(sh.get(r, 1).v)) && /dienst/i.test(str(sh.get(r, 2).v))) { head = r; break; } }
@@ -400,7 +407,7 @@ function extract(book) {
         if (!d || (prev && (d - prev) / 86400000 !== 1 && (d - prev) !== 0)) { if (prev && (!d || Math.abs((d - prev) / 86400000) > 3)) { d = new Date(prev.getTime() + 86400000); issues.datum++; } }
         if (!d) continue;
         prev = d;
-      } else { if (d && prev && iso(d) !== iso(prev)) issues.datum++; d = prev || d; if (!d) continue; }
+      } else { if ((d && prev && iso(d) !== iso(prev)) || (!d && str(a) && prev)) issues.datum++; d = prev || d; if (!d) continue; }
       const col = (c) => sh.get(r, c).v;
       const num = (c) => (isNum(col(c)) ? col(c) : 0);
       const vt = col(12); const hw = col(13); const np = col(11);
@@ -420,14 +427,17 @@ function extract(book) {
       if (/oorzaken oranje/i.test(joined)) { mode = 'oorzaak'; continue; }
       if (/^datum\b/i.test(texts[0].s) && /reden/i.test(joined)) continue;
       if (/mogelijke verbeteractie/i.test(joined)) { mode = null; continue; }
-      if (/conclusie/i.test(joined)) {
+      const eerste = (texts.find((t) => t.s) || { s: '' }).s;
+      if (/^(algemene\s+)?conclusie\b/i.test(eerste)) {
         const after = joined.replace(/^.*?conclusie\s*:?\s*/i, '').trim();
         conclBuf = { week, tekst: after }; conclusies.push(conclBuf); mode = 'concl'; continue;
       }
-      if (mode === 'concl') { conclBuf.tekst = (conclBuf.tekst + ' ' + joined).trim(); continue; }
-      if (/^extra (algemene )?opmerking|^opmerking na dienst/i.test(texts[0].s)) {
-        const dm = parseDateText(texts[0].s) || (/(\d{1,2})-(\d{1,2})/.exec(texts[0].s) ? (() => { const x = /(\d{1,2})-(\d{1,2})/.exec(texts[0].s); return new Date(Date.UTC(2026, +x[2] - 1, +x[1])); })() : null);
-        const dienst = /nacht/i.test(texts[0].s) ? 'Nacht' : 'Dag';
+      const isExtra = /^extra (algemene )?opmerking|^opmerking na dienst/i.test(texts[0].s);
+      if (mode === 'concl' && !isExtra) { conclBuf.tekst = (conclBuf.tekst + ' ' + joined).trim(); continue; }
+      if (isExtra) {
+        const kop = texts[0].s.split(':')[0]; const x = /(\d{1,2})-(\d{1,2})(?!-?\d)/.exec(kop);
+        const dm = parseDateText(kop) || (x ? ddmm(+x[1], +x[2]) : null);
+        const dienst = /nacht/i.test(kop) ? 'Nacht' : /dag/i.test(kop) ? 'Dag' : 'Algemeen';
         const rest = texts[0].s.replace(/^[^:]*:\s*/, '');
         lastMelding = { week, datum: dm ? iso(dm) : null, dienst, melding: rest };
         meldingen.push(lastMelding); mode = 'extra'; continue;
@@ -437,7 +447,7 @@ function extract(book) {
       if (mode === 'oorzaak') {
         const a = sh.get(r, 1).v; const reden = texts.slice(2).map((t) => t.s).filter(Boolean).join(' ') || (texts[1].s && !/^(dag|nacht)/i.test(texts[1].s) ? texts[1].s : '');
         let d = isNum(a) ? serialToDate(a) : parseDateText(str(a));
-        if (!d && /^\d{1,2}-\d{1,2}$/.test(str(a))) { const x = str(a).split('-'); d = new Date(Date.UTC(2026, +x[1] - 1, +x[0])); }
+        if (!d && /^\d{1,2}-\d{1,2}$/.test(str(a))) { const x = str(a).split('-'); d = ddmm(+x[0], +x[1]); }
         if (!d && !str(a) && !texts[1].s && lastMelding && lastMelding.week === week) { lastMelding.melding += ' ' + reden; continue; }
         if (!reden) continue;
         lastMelding = { week, datum: d ? iso(d) : null, dienst: /nacht/i.test(texts[1].s) ? 'Nacht' : 'Dag', melding: reden };
@@ -465,6 +475,10 @@ const S = { data: null, van: null, tot: null, dienst: '', thema: null, zoek: '' 
 const thNaam = (c) => (THEMAS.find((t) => t.code === c) || {}).naam || c;
 const BCOL = { Groen: 'var(--ok)', Oranje: 'var(--warn)', Rood: 'var(--bad)', 'Geen overdracht': 'var(--none)' };
 const BKEYS = ['Groen', 'Oranje', 'Rood', 'Geen overdracht'];
+// Weken worden intern als jaar*100+week bewaard; wl() maakt er een leesbaar weeknummer van.
+let MEERJAREN = false;
+const wl = (k) => (MEERJAREN ? `${k % 100} '${String(Math.floor(k / 100)).slice(2)}` : String(k % 100));
+const dienstPast = (m) => !S.dienst || m.dienst === S.dienst || m.dienst === 'Algemeen';
 
 function tipFor(box) {
   let t = box.querySelector(':scope > .tip');
@@ -494,7 +508,7 @@ function render() {
   const D = S.data; if (!D) return;
   const inRange = (w) => w >= S.van && w <= S.tot;
   const dien = D.diensten.filter((r) => inRange(r.week) && (!S.dienst || r.dienst === S.dienst));
-  const meld = D.meldingen.filter((m) => inRange(m.week) && (!S.dienst || m.dienst === S.dienst));
+  const meld = D.meldingen.filter((m) => inRange(m.week) && dienstPast(m));
   const st = statsOf(dien);
   const som = (k) => d3.sum(dien, (r) => r[k] || 0);
   $('k-diensten').textContent = F.int(st.n);
@@ -525,6 +539,9 @@ function render() {
   const dq = $('dq'); dq.replaceChildren();
   [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
     .filter(([, n]) => n > 0).forEach(([t]) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
+  const onb = dien.filter((r) => r.beleving === 'Onbekend');
+  if (onb.length) { const li = document.createElement('li'); li.textContent = `${F.int(onb.length)} ${onb.length === 1 ? 'dienst heeft' : 'diensten hebben'} geen herkenbare kleur in kolom Beleving en ${onb.length === 1 ? 'telt' : 'tellen'} niet mee in de kleurgrafieken: ` + onb.slice(0, 6).map((r) => d3.utcFormat('%d-%m')(new Date(r.datum)) + ' ' + r.dienst.toLowerCase()).join(', ') + (onb.length > 6 ? ', …' : '') + '.'; dq.appendChild(li); }
+  D.issues.dubbel.forEach((t) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
   if (!dq.children.length) { const li = document.createElement('li'); li.textContent = 'Niets bijzonders gevonden.'; dq.appendChild(li); }
 }
 
@@ -547,11 +564,11 @@ function drawWeek(el, rows, laag) {
   const stack = d3.stack().keys(BKEYS).value((d, k) => d[keyMap[k]])(rows);
   svg.append('g').selectAll('g').data(stack).join('g').style('fill', (s) => BCOL[s.key]).selectAll('rect').data((s) => s).join('rect')
     .attr('x', (d) => x(d.data.week)).attr('width', x.bandwidth()).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - 1)).attr('rx', 1.5);
-  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => x.step() > 26 || i % 2 === 0)).tickFormat((w) => 'wk ' + w)).call(axisClean);
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => x.step() > 26 || i % 2 === 0)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
   svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6)).call(axisClean).call((g) => g.select('.domain').remove());
   const t = tipFor(el);
   svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-    .on('pointermove', (ev, r) => t.show(ev, 'Week ' + r.week, [...BKEYS.map((k) => [BCOL[k], k, F.int(r[keyMap[k]])]), [null, 'Oranje of rood', r.pct == null ? '–' : F.pct(r.pct)]])).on('pointerleave', () => t.hide());
+    .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week), [...BKEYS.map((k) => [BCOL[k], k, F.int(r[keyMap[k]])]), [null, 'Oranje of rood', r.pct == null ? '–' : F.pct(r.pct)]])).on('pointerleave', () => t.hide());
 }
 
 function drawDN(el, all) {
@@ -586,7 +603,7 @@ function drawPhases(D, dien, meld) {
     const ms = meld.filter((m) => fase(m.week) === f); const s = statsOf(rs);
     const top = THEMAS.map((t) => ({ naam: t.naam, n: ms.filter((m) => m.themas.includes(t.code)).length })).sort((a, b) => b.n - a.n)[0];
     const div = document.createElement('div'); div.className = 'phase';
-    const h = document.createElement('h4'); h.textContent = f + ` (wk ${d3.min(rs, (r) => r.week)}–${d3.max(rs, (r) => r.week)})`;
+    const h = document.createElement('h4'); h.textContent = f + ` (wk ${wl(d3.min(rs, (r) => r.week))}–${wl(d3.max(rs, (r) => r.week))})`;
     const p1 = document.createElement('p'); const big = document.createElement('span'); big.className = 'big'; big.textContent = s.pct == null ? '—' : F.pct(s.pct); p1.append(big, ' oranje of rood');
     const p2 = document.createElement('p'); p2.textContent = 'Vaartijd gemiddeld ' + (s.vaart == null ? '—' : F.dec1(s.vaart)) + ' uur';
     const p3 = document.createElement('p'); p3.textContent = 'Vaakst genoemd: ' + (top && top.n ? top.naam : '—');
@@ -622,10 +639,10 @@ function drawHeat(el, meld, weeks, order) {
   svg.append('g').selectAll('text').data(themas).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (c, i) => i * cell + cell / 2 + 4).text(thNaam);
   svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + 1).attr('y', (c) => themas.indexOf(c.code) * cell + 1)
     .attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2).style('fill', (c) => (c.n ? 'var(--accent)' : 'var(--grid)')).style('fill-opacity', (c) => (c.n ? .25 + .75 * c.n / max : 1))
-    .on('pointermove', (ev, c) => t.show(ev, 'Week ' + c.week, [[null, thNaam(c.code), F.int(c.n) + (c.n === 1 ? ' melding' : ' meldingen')]])).on('pointerleave', () => t.hide());
+    .on('pointermove', (ev, c) => t.show(ev, 'Week ' + wl(c.week), [[null, thNaam(c.code), F.int(c.n) + (c.n === 1 ? ' melding' : ' meldingen')]])).on('pointerleave', () => t.hide());
   svg.append('g').selectAll('text').data(cells.filter((c) => c.n)).join('text').attr('class', 'val').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + cell / 2).attr('y', (c) => themas.indexOf(c.code) * cell + cell / 2 + 4)
     .attr('text-anchor', 'middle').style('fill', 'var(--bg)').style('pointer-events', 'none').text((c) => c.n);
-  svg.append('g').selectAll('text').data(weeks).join('text').attr('x', (w, i) => lw + i * cell + cell / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((w, i) => (cell >= 26 || i % 2 === 0 ? w : ''));
+  svg.append('g').selectAll('text').data(weeks).join('text').attr('x', (w, i) => lw + i * cell + cell / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((w, i) => (cell >= 26 || i % 2 === 0 ? wl(w) : ''));
 }
 
 function drawRanking(meld) {
@@ -667,11 +684,11 @@ function drawMinis(rows) {
     }
     const top = rows.reduce((a, r) => ((r[key] || 0) > (a[key] || 0) ? r : a), rows[0]);
     if (top[key]) svg.append('text').attr('class', 'val').attr('x', Math.min(W - 44, Math.max(m.l, x(top.week) - 4))).attr('y', y(top[key]) - 4).text(f(top[key]));
-    svg.append('text').attr('x', m.l).attr('y', H - 4).text('wk ' + rows[0].week);
-    svg.append('text').attr('x', W - m.r).attr('y', H - 4).attr('text-anchor', 'end').text('wk ' + rows[rows.length - 1].week);
+    svg.append('text').attr('x', m.l).attr('y', H - 4).text('wk ' + wl(rows[0].week));
+    svg.append('text').attr('x', W - m.r).attr('y', H - 4).attr('text-anchor', 'end').text('wk ' + wl(rows[rows.length - 1].week));
     const t = tipFor(el);
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
-      .on('pointermove', (ev, r) => t.show(ev, 'Week ' + r.week, [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
+      .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week), [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
   });
 }
 
@@ -688,7 +705,7 @@ function drawChips() {
 }
 function drawMeldingen() {
   const D = S.data; const q = S.zoek.trim().toLowerCase();
-  const rows = D.meldingen.filter((m) => m.week >= S.van && m.week <= S.tot && (!S.dienst || m.dienst === S.dienst) && (!S.thema || m.themas.includes(S.thema))
+  const rows = D.meldingen.filter((m) => m.week >= S.van && m.week <= S.tot && dienstPast(m) && (!S.thema || m.themas.includes(S.thema))
     && (!q || [m.melding, m.partijen.join(' '), m.themas.map(thNaam).join(' '), m.datum, m.dienst].join(' ').toLowerCase().includes(q)))
     .sort((a, b) => (a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0));
   $('n-meld').textContent = F.int(rows.length);
@@ -704,7 +721,7 @@ function drawConclusies(list) {
   const box = $('concl'); box.replaceChildren();
   const items = list.filter((c) => c.tekst).sort((a, b) => b.week - a.week);
   $('conclusies').hidden = !items.length;
-  items.forEach((c, i) => { const d = document.createElement('details'); if (i === 0) d.open = true; const s = document.createElement('summary'); s.textContent = 'Week ' + c.week; const p = document.createElement('p'); p.textContent = c.tekst; d.append(s, p); box.appendChild(d); });
+  items.forEach((c, i) => { const d = document.createElement('details'); if (i === 0) d.open = true; const s = document.createElement('summary'); s.textContent = 'Week ' + wl(c.week); const p = document.createElement('p'); p.textContent = c.tekst; d.append(s, p); box.appendChild(d); });
 }
 
 /* ===== Laden en bediening ===== */
@@ -716,11 +733,12 @@ async function load(buf, naam) {
     if (!data.diensten.length) throw new Error('Geen weekbladen gevonden. Klopt het dat de bladen "Week NN 2026" heten?');
     S.data = data;
     const weeks = [...new Set(data.diensten.map((r) => r.week))].sort((a, b) => a - b);
+    MEERJAREN = new Set(weeks.map((w) => Math.floor(w / 100))).size > 1;
     S.van = weeks[0]; S.tot = weeks[weeks.length - 1]; S.thema = null;
-    ['f-van', 'f-tot'].forEach((id) => { const sel = $(id); sel.replaceChildren(...weeks.map((w) => new Option(String(w), String(w)))); });
+    ['f-van', 'f-tot'].forEach((id) => { const sel = $(id); sel.replaceChildren(...weeks.map((w) => new Option(wl(w), String(w)))); });
     $('f-van').value = String(S.van); $('f-tot').value = String(S.tot);
     $('filters').hidden = false; $('dash').hidden = false;
-    setStatus(`${naam}: ${F.int(data.diensten.length)} diensten en ${F.int(data.meldingen.length)} meldingen ingelezen, week ${S.van} t/m ${S.tot}.`);
+    setStatus(`${naam}: ${F.int(data.diensten.length)} diensten en ${F.int(data.meldingen.length)} meldingen ingelezen, week ${wl(S.van)} t/m ${wl(S.tot)}.`);
     render();
   } catch (e) { console.error(e); setStatus('Het bestand kon niet worden ingelezen: ' + e.message, true); }
 }
@@ -728,8 +746,9 @@ $('pick').addEventListener('click', () => $('file').click());
 $('file').addEventListener('change', async (e) => { const f = e.target.files[0]; if (f) load(await f.arrayBuffer(), f.name); });
 const drop = $('drop');
 ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('drag'); }));
-['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('drag'); }));
-drop.addEventListener('drop', async (e) => { const f = e.dataTransfer.files[0]; if (f) load(await f.arrayBuffer(), f.name); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('drop', async (e) => { e.preventDefault(); drop.classList.remove('drag'); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) load(await f.arrayBuffer(), f.name); });
 $('f-van').addEventListener('change', (e) => { S.van = Number(e.target.value); if (S.van > S.tot) { S.tot = S.van; $('f-tot').value = e.target.value; } render(); });
 $('f-tot').addEventListener('change', (e) => { S.tot = Number(e.target.value); if (S.tot < S.van) { S.van = S.tot; $('f-van').value = e.target.value; } render(); });
 $('f-dienst').addEventListener('change', (e) => { S.dienst = e.target.value; render(); });
