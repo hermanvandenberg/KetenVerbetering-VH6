@@ -371,7 +371,7 @@ const XLSX_READER = (() => {
 /* ===== Weekbladen omzetten naar diensten en meldingen ===== */
 function extract(book) {
   const { sheets, classify } = book;
-  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [] };
+  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, sterkteLeeg: 0, dubbel: [] };
   const gezien = new Map(); let laatsteJaar = null;
   const laagwater = new Set();
   const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
@@ -394,6 +394,13 @@ function extract(book) {
     for (let r = 1; r <= Math.min(10, sh.maxR); r++) { if (/datum/i.test(str(sh.get(r, 1).v)) && /dienst/i.test(str(sh.get(r, 2).v))) { head = r; break; } }
     if (!head) continue;
     for (let r = 1; r < head; r++) if (/laagwater/i.test(str(sh.get(r, 1).v))) laagwater.add(week);
+    // Kolommen op kopnaam zoeken (zonder voorvoegsel als 'S:'), met de vaste positie als terugval
+    const kop = {}; for (let c = 1; c <= 30; c++) { const t = str(sh.get(head, c).v).replace(/^[A-Z]\s*:\s*/, '').toLowerCase(); if (t) kop[c] = t; }
+    const zoekKol = (re, vast) => { for (const c in kop) if (re.test(kop[c])) return +c; return vast; };
+    const K = { beleving: zoekKol(/beleving/, 3), ongeval: zoekKol(/ongeval/, 4), onveilig: zoekKol(/onveilig/, 5), verbeteridee: zoekKol(/verbeteridee/, 6), draad: zoekKol(/draad/, 7),
+      personeel: zoekKol(/sterkte|personeel/, 8), fout: zoekKol(/fout gekoppeld/, 9), onderhoud: zoekKol(/onderhoud/, 10), planning: zoekKol(/planning/, 11), vaartijd: zoekKol(/vaartijd/, 12), herwerk: zoekKol(/herwerk/, 13) };
+    // Kolom H heette eerst 'Personeelsbijzonderheden' (aantal meldingen), nu 'In de sterkte aan dek' (aantal personen)
+    const sterkteKop = /sterkte/.test(kop[K.personeel] || '');
     let prev = null;
     let r = head + 1;
     for (; r <= sh.maxR; r++) {
@@ -410,12 +417,16 @@ function extract(book) {
       } else { if ((d && prev && iso(d) !== iso(prev)) || (!d && str(a) && prev)) issues.datum++; d = prev || d; if (!d) continue; }
       const col = (c) => sh.get(r, c).v;
       const num = (c) => (isNum(col(c)) ? col(c) : 0);
-      const vt = col(12); const hw = col(13); const np = col(11);
+      const vt = col(K.vaartijd); const hw = col(K.herwerk); const np = col(K.planning); const pv = col(K.personeel);
       if (!isNum(vt)) issues.vaartijdX++;
       if (str(hw) && !isNum(hw)) issues.herwerkTekst++;
-      diensten.push({ week, datum: iso(d), dienst, beleving: classify(sh.get(r, 3).fill),
-        ongeval: num(4), onveilig: num(5), verbeteridee: num(6), defecte_draad: num(7), personeel: isNum(col(8)) ? col(8) : (str(col(8)) ? 1 : 0),
-        fout_gekoppeld: num(9), gebrekkig_onderhoud: num(10), nieuwe_planningen: num(11) || (str(np) && !isNum(np) && !/^x$/i.test(str(np)) ? 1 : 0),
+      // Sterkte aan dek: een aantal personen; 0 of leeg betekent niet ingevuld (het blanco blad staat vol nullen)
+      const sterkte = sterkteKop && isNum(pv) && pv > 0 ? pv : null;
+      if (sterkteKop && sterkte == null) issues.sterkteLeeg++;
+      diensten.push({ week, datum: iso(d), dienst, beleving: classify(sh.get(r, K.beleving).fill),
+        ongeval: num(K.ongeval), onveilig: num(K.onveilig), verbeteridee: num(K.verbeteridee), defecte_draad: num(K.draad),
+        personeel: sterkteKop ? 0 : (isNum(pv) ? pv : (str(pv) ? 1 : 0)), sterkte,
+        fout_gekoppeld: num(K.fout), gebrekkig_onderhoud: num(K.onderhoud), nieuwe_planningen: num(K.planning) || (str(np) && !isNum(np) && !/^x$/i.test(str(np)) ? 1 : 0),
         vaartijd: isNum(vt) ? vt : null, herwerk: isNum(hw) ? hw : 0, herwerk_opm: str(hw) && !isNum(hw) && !/^x$/i.test(str(hw)) ? 1 : 0 });
     }
     // Oorzaken en extra opmerkingen
@@ -498,10 +509,12 @@ function tipFor(box) {
 const statsOf = (rs) => {
   const met = rs.filter((r) => ['Groen', 'Oranje', 'Rood'].includes(r.beleving));
   const vt = rs.filter((r) => r.vaartijd != null);
+  const sk = rs.filter((r) => r.sterkte != null);
   const n = (b) => rs.filter((r) => r.beleving === b).length;
   return { n: rs.length, met: met.length, groen: n('Groen'), oranje: n('Oranje'), rood: n('Rood'), geen: n('Geen overdracht'),
     pct: met.length ? met.filter((r) => r.beleving !== 'Groen').length / met.length : null,
-    vaart: vt.length ? d3.mean(vt, (r) => r.vaartijd) : null };
+    vaart: vt.length ? d3.mean(vt, (r) => r.vaartijd) : null,
+    sterkte: sk.length ? d3.mean(sk, (r) => r.sterkte) : null };
 };
 
 function render() {
@@ -533,11 +546,11 @@ function render() {
   drawHBar($('c-partij'), pc, false);
   drawHeat($('c-heat'), meld, weeks, themaCount);
   drawRanking(meld);
-  drawMinis(perWeek);
+  drawMinis(perWeek, dien);
   drawChips(); drawMeldingen();
   drawConclusies(D.conclusies.filter((c) => inRange(c.week)));
   const dq = $('dq'); dq.replaceChildren();
-  [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
+  [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`'In de sterkte aan dek' niet (of als 0) ingevuld bij ${F.int(D.issues.sterkteLeeg)} ${D.issues.sterkteLeeg === 1 ? 'dienst' : 'diensten'}.`, D.issues.sterkteLeeg], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
     .filter(([, n]) => n > 0).forEach(([t]) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
   const onb = dien.filter((r) => r.beleving === 'Onbekend');
   if (onb.length) { const li = document.createElement('li'); li.textContent = `${F.int(onb.length)} ${onb.length === 1 ? 'dienst heeft' : 'diensten hebben'} geen herkenbare kleur in kolom Beleving en ${onb.length === 1 ? 'telt' : 'tellen'} niet mee in de kleurgrafieken: ` + onb.slice(0, 6).map((r) => d3.utcFormat('%d-%m')(new Date(r.datum)) + ' ' + r.dienst.toLowerCase()).join(', ') + (onb.length > 6 ? ', …' : '') + '.'; dq.appendChild(li); }
@@ -661,13 +674,20 @@ function drawRanking(meld) {
   });
 }
 
-function drawMinis(rows) {
+function drawMinis(rows, dien) {
   const box = $('minis'); box.replaceChildren();
-  const defs = [['Gebrekkig onderhoud', 'onderhoud', F.int, false], ['Nieuwe planningen', 'planningen', F.int, false], ['Fout gekoppelde bakken', 'fout', F.int, false], ['Herwerk (geteld)', 'herwerk', F.int, false], ['Actieve vaartijd (gem. uur)', 'vaart', (v) => F.dec1(v) + ' u', true]];
-  defs.forEach(([title, key, f, line]) => {
+  const defs = [['Gebrekkig onderhoud', 'onderhoud', F.int, false], ['Nieuwe planningen', 'planningen', F.int, false], ['Fout gekoppelde bakken', 'fout', F.int, false], ['Herwerk (geteld)', 'herwerk', F.int, false], ['Actieve vaartijd (gem. uur)', 'vaart', (v) => F.dec1(v) + ' u', true, 'uur']];
+  // Sterkte aan dek alleen tonen als het nieuwe Excel-model (kolom 'In de sterkte aan dek') is ingevuld
+  if (rows.some((r) => r.sterkte != null)) defs.push(['In de sterkte aan dek (gem.)', 'sterkte', (v) => F.dec1(v) + ' pers.', true, 'personen per dienst']);
+  defs.forEach(([title, key, f, line, eenheid]) => {
     const card = document.createElement('div'); card.className = 'card';
     const h = document.createElement('h3'); h.textContent = title; const p = document.createElement('p'); p.className = 'note';
-    p.textContent = line ? 'Gemiddeld ' + (d3.mean(rows.filter((r) => r[key] != null), (r) => r[key]) == null ? '—' : F.dec1(d3.mean(rows.filter((r) => r[key] != null), (r) => r[key]))) + ' uur' : 'Totaal ' + F.int(d3.sum(rows, (r) => r[key] || 0));
+    const gem = (rs, k) => d3.mean(rs.filter((r) => r[k] != null), (r) => r[k]);
+    p.textContent = line ? 'Gemiddeld ' + (gem(rows, key) == null ? '—' : F.dec1(gem(rows, key))) + ' ' + eenheid : 'Totaal ' + F.int(d3.sum(rows, (r) => r[key] || 0));
+    if (key === 'sterkte') {
+      const g = gem(dien.filter((r) => r.beleving === 'Groen'), 'sterkte'); const or = gem(dien.filter((r) => r.beleving === 'Oranje' || r.beleving === 'Rood'), 'sterkte');
+      if (g != null && or != null) p.textContent += `. Groene diensten ${F.dec1(g)}, oranje/rode ${F.dec1(or)}.`;
+    }
     const el = document.createElement('div'); el.className = 'chart'; card.append(h, p, el); box.appendChild(card);
     if (!rows.length) return;
     const W = Math.max(240, el.clientWidth), H = 112, m = { t: 16, r: 6, b: 20, l: 6 };
