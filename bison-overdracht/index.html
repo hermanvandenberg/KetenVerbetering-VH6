@@ -198,8 +198,26 @@ footer { color: var(--muted); font-size: .8rem; }
 
     <section id="registraties">
       <h2>Registraties per week</h2>
-      <p class="sub">De getelde kolommen uit de weekbladen. Elke grafiek heeft een eigen schaal.</p>
+      <p class="sub">Elke kolom uit de weekbladen, ook kolommen die later zijn toegevoegd. Tellingen staan per week opgeteld, metingen (zoals vaartijd of sterkte) als gemiddelde per dienst. Elke grafiek heeft een eigen schaal.</p>
       <div class="grid-3" id="minis"></div>
+    </section>
+
+    <section id="samenhang">
+      <h2>Samenhang</h2>
+      <p class="sub">Hoe hangen de kolommen samen met de beleving en met elkaar? Berekend per dienst, binnen de gekozen periode en dienstfilter. Een nieuwe kolom in het Excel komt hier vanzelf bij. Een verband zegt niets over oorzaak en gevolg, en bij weinig diensten is het onzeker.</p>
+      <div class="card">
+        <h3>Verband met de beleving</h3>
+        <p class="note">Gemiddelde per dienst bij groene en bij oranje of rode diensten. Bij tellingen ook hoe vaak een dienst oranje of rood was als de kolom wel of niet voorkwam. Gesorteerd op de sterkte van het verband.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Kolom</th><th class="num">Diensten</th><th class="num">Gem. bij groen</th><th class="num">Gem. bij oranje/rood</th><th class="num">Oranje/rood als &gt; 0</th><th class="num">Oranje/rood als 0</th><th>Verband</th></tr></thead>
+          <tbody id="t-samen"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h3>Kolommen tegen elkaar</h3>
+        <p class="note">Correlatie per dienst (−1 tot 1). Blauw: gaan samen omhoog. Rood: als de een stijgt, daalt de ander. Hoe voller de kleur, hoe sterker. Een leeg vak betekent te weinig diensten (minder dan 20) of een kolom die niet varieert.</p>
+        <div class="chart" id="c-corr"></div>
+      </div>
     </section>
 
     <section id="meldingen">
@@ -371,7 +389,8 @@ const XLSX_READER = (() => {
 /* ===== Weekbladen omzetten naar diensten en meldingen ===== */
 function extract(book) {
   const { sheets, classify } = book;
-  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, sterkteLeeg: 0, dubbel: [] };
+  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [] };
+  const kolMap = new Map(); // alle kolommen vanaf D, ook kolommen die later worden toegevoegd
   const gezien = new Map(); let laatsteJaar = null;
   const laagwater = new Set();
   const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
@@ -399,8 +418,14 @@ function extract(book) {
     const zoekKol = (re, vast) => { for (const c in kop) if (re.test(kop[c])) return +c; return vast; };
     const K = { beleving: zoekKol(/beleving/, 3), ongeval: zoekKol(/ongeval/, 4), onveilig: zoekKol(/onveilig/, 5), verbeteridee: zoekKol(/verbeteridee/, 6), draad: zoekKol(/draad/, 7),
       personeel: zoekKol(/sterkte|personeel/, 8), fout: zoekKol(/fout gekoppeld/, 9), onderhoud: zoekKol(/onderhoud/, 10), planning: zoekKol(/planning/, 11), vaartijd: zoekKol(/vaartijd/, 12), herwerk: zoekKol(/herwerk/, 13) };
-    // Kolom H heette eerst 'Personeelsbijzonderheden' (aantal meldingen), nu 'In de sterkte aan dek' (aantal personen)
-    const sterkteKop = /sterkte/.test(kop[K.personeel] || '');
+    // Elke kolom vanaf D met een kopnaam wordt meegenomen, dus ook nieuwe kolommen. De kopnaam (zonder voorvoegsel) is de sleutel.
+    const kolHier = [];
+    for (const c in kop) {
+      if (+c < 4 || /^(beleving|datum|dienst)\b|toelichting|opmerking/.test(kop[c])) continue;
+      const ruw = str(sh.get(head, +c).v); const label = ruw.replace(/^[A-Z]\s*:\s*/, '').replace(/\s+/g, ' ').trim(); const key = label.toLowerCase();
+      if (!kolMap.has(key)) kolMap.set(key, { key, label, groep: (/^([A-Z])\s*:/.exec(ruw) || [])[1] || '', weken: [] });
+      kolMap.get(key).weken.push(week); kolHier.push([+c, key]);
+    }
     let prev = null;
     let r = head + 1;
     for (; r <= sh.maxR; r++) {
@@ -420,12 +445,11 @@ function extract(book) {
       const vt = col(K.vaartijd); const hw = col(K.herwerk); const np = col(K.planning); const pv = col(K.personeel);
       if (!isNum(vt)) issues.vaartijdX++;
       if (str(hw) && !isNum(hw)) issues.herwerkTekst++;
-      // Sterkte aan dek: aantal mensen dat meetelt voor de wettelijke bemanningseis (boven de sterkte, bijv. herintreders, telt niet mee); 0 of leeg betekent niet ingevuld (het blanco blad staat vol nullen)
-      const sterkte = sterkteKop && isNum(pv) && pv > 0 ? pv : null;
-      if (sterkteKop && sterkte == null) issues.sterkteLeeg++;
+      // Ruwe waarde per kolom: getal, 'T' (tekst, behalve 'x') of null (leeg). Wordt na het inlezen per kolomsoort omgezet.
+      const m = {}; kolHier.forEach(([c, key]) => { const v = col(c); m[key] = isNum(v) ? v : (str(v) && !/^x$/i.test(str(v)) ? 'T' : null); });
       diensten.push({ week, datum: iso(d), dienst, beleving: classify(sh.get(r, K.beleving).fill),
         ongeval: num(K.ongeval), onveilig: num(K.onveilig), verbeteridee: num(K.verbeteridee), defecte_draad: num(K.draad),
-        personeel: sterkteKop ? 0 : (isNum(pv) ? pv : (str(pv) ? 1 : 0)), sterkte,
+        personeel: isNum(pv) ? pv : (str(pv) ? 1 : 0), m,
         fout_gekoppeld: num(K.fout), gebrekkig_onderhoud: num(K.onderhoud), nieuwe_planningen: num(K.planning) || (str(np) && !isNum(np) && !/^x$/i.test(str(np)) ? 1 : 0),
         vaartijd: isNum(vt) ? vt : null, herwerk: isNum(hw) ? hw : 0, herwerk_opm: str(hw) && !isNum(hw) && !/^x$/i.test(str(hw)) ? 1 : 0 });
     }
@@ -475,7 +499,38 @@ function extract(book) {
     m.themas = THEMAS.filter((th) => th.woorden.some((w) => (w instanceof RegExp ? w.test(t) : t.includes(w)))).map((th) => th.code);
     m.partijen = PARTIJEN.filter((p) => p.re.test(m.melding)).map((p) => p.naam);
   });
-  return { diensten, meldingen, conclusies, issues, laagwater };
+  return { diensten, meldingen, conclusies, issues, laagwater, kolommen: maakKolommen(kolMap, diensten, issues) };
+}
+
+/* Kolomsoort bepalen en waarden omzetten.
+   'som': een telling (meldingen, aantallen); leeg = 0, tekst = 1. Per week opgeteld.
+   'gem': een meting (vaartijd, sterkte); leeg = niet ingevuld. Per week het gemiddelde.
+   Te forceren met '(gem)' of '(som)' in de kopnaam. Anders op naam, of op de cijfers: staat er bij de meeste diensten iets anders dan 0, dan is het een meting.
+   Bij een meting telt 0 als niet ingevuld (het blanco blad staat vol nullen), behalve bij tijden en uren. */
+const GEM_WOORDEN = /sterkte|vaartijd|gemiddeld|\bgem\b|uren|\buur\b|tijd|bezetting|personen|temperatuur|percentage|%/;
+function maakKolommen(kolMap, diensten, issues) {
+  const alleWeken = [...new Set(diensten.map((r) => r.week))].sort((a, b) => a - b);
+  return [...kolMap.values()].map((k) => {
+    const rs = diensten.filter((r) => k.key in r.m); const nums = rs.map((r) => r.m[k.key]).filter((v) => typeof v === 'number');
+    const forced = /\(gem/.test(k.key) ? 'gem' : /\((som|aantal|totaal)/.test(k.key) ? 'som' : null;
+    const aandeel = nums.length ? nums.filter((v) => v !== 0).length / nums.length : 0;
+    const soort = forced || (GEM_WOORDEN.test(k.key) ? 'gem' : aandeel >= 0.6 ? 'gem' : 'som');
+    const tijd = /tijd|uur|uren/.test(k.key); const nulLeeg = soort === 'gem' && !tijd;
+    const tekstTelt = !/herwerk|vaartijd/.test(k.key); // bestaande afspraak: herwerk en vaartijd als tekst tellen niet
+    let leeg = 0;
+    rs.forEach((r) => {
+      let v = r.m[k.key];
+      if (v === 'T') v = soort === 'gem' ? null : (tekstTelt ? 1 : 0);
+      if (v == null && soort === 'som') v = 0;
+      if (nulLeeg && v === 0) v = null;
+      if (v == null) leeg++;
+      r.m[k.key] = v;
+    });
+    if (nulLeeg && leeg && !/vaartijd/.test(k.key)) issues.leeg = (issues.leeg || []).concat([[k.label, leeg]]);
+    const eerste = Math.min(...k.weken);
+    if (alleWeken.length && eerste > alleWeken[0]) issues.nieuw = (issues.nieuw || []).concat([[k.label, eerste]]);
+    return { key: k.key, label: k.label, groep: k.groep, soort, eenheid: tijd ? 'uur' : '' };
+  });
 }
 
 /* ===== Dashboard tekenen ===== */
@@ -509,12 +564,10 @@ function tipFor(box) {
 const statsOf = (rs) => {
   const met = rs.filter((r) => ['Groen', 'Oranje', 'Rood'].includes(r.beleving));
   const vt = rs.filter((r) => r.vaartijd != null);
-  const sk = rs.filter((r) => r.sterkte != null);
   const n = (b) => rs.filter((r) => r.beleving === b).length;
   return { n: rs.length, met: met.length, groen: n('Groen'), oranje: n('Oranje'), rood: n('Rood'), geen: n('Geen overdracht'),
     pct: met.length ? met.filter((r) => r.beleving !== 'Groen').length / met.length : null,
-    vaart: vt.length ? d3.mean(vt, (r) => r.vaartijd) : null,
-    sterkte: sk.length ? d3.mean(sk, (r) => r.sterkte) : null };
+    vaart: vt.length ? d3.mean(vt, (r) => r.vaartijd) : null };
 };
 
 function render() {
@@ -546,14 +599,17 @@ function render() {
   drawHBar($('c-partij'), pc, false);
   drawHeat($('c-heat'), meld, weeks, themaCount);
   drawRanking(meld);
-  drawMinis(perWeek, dien);
+  drawMinis(weeks, dien, D.kolommen);
+  drawSamenhang(dien, D.kolommen);
   drawChips(); drawMeldingen();
   drawConclusies(D.conclusies.filter((c) => inRange(c.week)));
   const dq = $('dq'); dq.replaceChildren();
-  [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`'In de sterkte aan dek' niet (of als 0) ingevuld bij ${F.int(D.issues.sterkteLeeg)} ${D.issues.sterkteLeeg === 1 ? 'dienst' : 'diensten'}.`, D.issues.sterkteLeeg], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
+  [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
     .filter(([, n]) => n > 0).forEach(([t]) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
   const onb = dien.filter((r) => r.beleving === 'Onbekend');
   if (onb.length) { const li = document.createElement('li'); li.textContent = `${F.int(onb.length)} ${onb.length === 1 ? 'dienst heeft' : 'diensten hebben'} geen herkenbare kleur in kolom Beleving en ${onb.length === 1 ? 'telt' : 'tellen'} niet mee in de kleurgrafieken: ` + onb.slice(0, 6).map((r) => d3.utcFormat('%d-%m')(new Date(r.datum)) + ' ' + r.dienst.toLowerCase()).join(', ') + (onb.length > 6 ? ', …' : '') + '.'; dq.appendChild(li); }
+  (D.issues.nieuw || []).forEach(([l, w]) => { const li = document.createElement('li'); li.textContent = `Nieuwe kolom '${l}' gevonden vanaf week ${wl(w)}. Die staat vanzelf bij de registraties en de samenhang.`; dq.appendChild(li); });
+  (D.issues.leeg || []).forEach(([l, n]) => { const li = document.createElement('li'); li.textContent = `'${l}' niet (of als 0) ingevuld bij ${F.int(n)} ${n === 1 ? 'dienst' : 'diensten'}.`; dq.appendChild(li); });
   D.issues.dubbel.forEach((t) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
   if (!dq.children.length) { const li = document.createElement('li'); li.textContent = 'Niets bijzonders gevonden.'; dq.appendChild(li); }
 }
@@ -674,21 +730,26 @@ function drawRanking(meld) {
   });
 }
 
-function drawMinis(rows, dien) {
+function kolWaarde(k, rs) {
+  const met = rs.filter((r) => r.m && k.key in r.m); if (!met.length) return null;
+  if (k.soort === 'som') return d3.sum(met, (r) => r.m[k.key]);
+  const v = met.filter((r) => r.m[k.key] != null); return v.length ? d3.mean(v, (r) => r.m[k.key]) : null;
+}
+const kolFmt = (k) => (k.soort === 'som' ? F.int : (v) => F.dec1(v) + (k.eenheid === 'uur' ? ' u' : ''));
+function drawMinis(weeks, dien, kolommen) {
   const box = $('minis'); box.replaceChildren();
-  const defs = [['Gebrekkig onderhoud', 'onderhoud', F.int, false], ['Nieuwe planningen', 'planningen', F.int, false], ['Fout gekoppelde bakken', 'fout', F.int, false], ['Herwerk (geteld)', 'herwerk', F.int, false], ['Actieve vaartijd (gem. uur)', 'vaart', (v) => F.dec1(v) + ' u', true, 'uur']];
-  // Sterkte aan dek alleen tonen als het nieuwe Excel-model (kolom 'In de sterkte aan dek') is ingevuld
-  if (rows.some((r) => r.sterkte != null)) defs.push(['In de sterkte aan dek (gem.)', 'sterkte', (v) => F.dec1(v) + ' pers.', true, 'personen per dienst']);
-  defs.forEach(([title, key, f, line, eenheid]) => {
+  // Elke kolom uit het Excel krijgt een eigen grafiek, ook kolommen die later zijn toegevoegd
+  const defs = kolommen.map((k) => [k.label + (k.soort === 'gem' ? ' (gem. per dienst)' : ''), k]);
+  const teken = []; // eerst alle kaarten plaatsen, dan tekenen, zodat de breedte van elke grafiek klopt
+  const rowsVan = (k) => weeks.map((w) => ({ week: w, [k.key]: kolWaarde(k, dien.filter((r) => r.week === w)) }));
+  defs.forEach(([title, k]) => {
+    const key = k.key; const f = kolFmt(k); const line = k.soort === 'gem'; const rows = rowsVan(k);
     const card = document.createElement('div'); card.className = 'card';
     const h = document.createElement('h3'); h.textContent = title; const p = document.createElement('p'); p.className = 'note';
-    const gem = (rs, k) => d3.mean(rs.filter((r) => r[k] != null), (r) => r[k]);
-    p.textContent = line ? 'Gemiddeld ' + (gem(rows, key) == null ? '—' : F.dec1(gem(rows, key))) + ' ' + eenheid : 'Totaal ' + F.int(d3.sum(rows, (r) => r[key] || 0));
-    if (key === 'sterkte') {
-      const g = gem(dien.filter((r) => r.beleving === 'Groen'), 'sterkte'); const or = gem(dien.filter((r) => r.beleving === 'Oranje' || r.beleving === 'Rood'), 'sterkte');
-      if (g != null && or != null) p.textContent += `. Groene diensten ${F.dec1(g)}, oranje/rode ${F.dec1(or)}.`;
-    }
+    const tot = kolWaarde(k, dien);
+    p.textContent = tot == null ? 'Niet ingevuld in deze periode' : (line ? 'Gemiddeld ' + f(tot) : 'Totaal ' + F.int(tot));
     const el = document.createElement('div'); el.className = 'chart'; card.append(h, p, el); box.appendChild(card);
+    teken.push(() => {
     if (!rows.length) return;
     const W = Math.max(240, el.clientWidth), H = 112, m = { t: 16, r: 6, b: 20, l: 6 };
     const x = d3.scaleBand(rows.map((r) => r.week), [m.l, W - m.r]).padding(.25);
@@ -697,7 +758,7 @@ function drawMinis(rows, dien) {
     svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--axis)');
     if (line) {
       const pts = rows.filter((r) => r[key] != null);
-      svg.append('path').datum(pts).attr('d', d3.line().x((r) => x(r.week) + x.bandwidth() / 2).y((r) => y(r[key]))).style('fill', 'none').style('stroke', 'var(--accent)').style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
+      svg.append('path').datum(rows).attr('d', d3.line().defined((r) => r[key] != null).x((r) => x(r.week) + x.bandwidth() / 2).y((r) => y(r[key]))).style('fill', 'none').style('stroke', 'var(--accent)').style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
       svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (r) => x(r.week) + x.bandwidth() / 2).attr('cy', (r) => y(r[key])).attr('r', 2.5).style('fill', 'var(--accent)');
     } else {
       svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week)).attr('width', x.bandwidth()).attr('y', (r) => y(r[key] || 0)).attr('height', (r) => H - m.b - y(r[key] || 0)).attr('rx', 1.5).style('fill', 'var(--accent)');
@@ -709,7 +770,61 @@ function drawMinis(rows, dien) {
     const t = tipFor(el);
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
       .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week), [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
+    });
   });
+  teken.forEach((f) => f());
+}
+
+const pearson = (pairs) => {
+  if (pairs.length < 20) return null;
+  const mx = d3.mean(pairs, (p) => p[0]), my = d3.mean(pairs, (p) => p[1]);
+  let sxy = 0, sxx = 0, syy = 0; pairs.forEach(([a, b]) => { sxy += (a - mx) * (b - my); sxx += (a - mx) ** 2; syy += (b - my) ** 2; });
+  return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
+};
+const sterkteWoord = (r) => (r == null ? 'te weinig gegevens' : Math.abs(r) >= 0.5 ? 'sterk' : Math.abs(r) >= 0.3 ? 'matig' : Math.abs(r) >= 0.1 ? 'zwak' : 'geen');
+function drawSamenhang(dien, kolommen) {
+  const isOR = (r) => (r.beleving === 'Oranje' || r.beleving === 'Rood' ? 1 : r.beleving === 'Groen' ? 0 : null);
+  const val = (r, k) => (r.m && k.key in r.m ? r.m[k.key] : null);
+  // Tabel: verband met beleving
+  const tb = $('t-samen'); tb.replaceChildren();
+  const rijen = kolommen.map((k) => {
+    const rs = dien.filter((r) => isOR(r) != null && val(r, k) != null);
+    const g = rs.filter((r) => !isOR(r)), o = rs.filter((r) => isOR(r));
+    const pos = rs.filter((r) => val(r, k) > 0), nul = rs.filter((r) => val(r, k) === 0);
+    const pct = (xs) => (xs.length >= 5 ? d3.mean(xs, isOR) : null);
+    return { k, n: rs.length, g: g.length ? d3.mean(g, (r) => val(r, k)) : null, o: o.length ? d3.mean(o, (r) => val(r, k)) : null,
+      pPos: k.soort === 'som' ? pct(pos) : null, nPos: pos.length, pNul: k.soort === 'som' ? pct(nul) : null, r: pearson(rs.map((r) => [val(r, k), isOR(r)])) };
+  }).sort((a, b) => Math.abs(b.r || 0) - Math.abs(a.r || 0));
+  rijen.forEach((x) => {
+    const tr = document.createElement('tr'); const td = (t, c) => { const e = document.createElement('td'); e.textContent = t; if (c) e.className = c; tr.appendChild(e); return e; };
+    const f = (v) => (v == null ? '–' : x.k.soort === 'som' ? nl.format(',.2f')(v) : F.dec1(v));
+    td(x.k.label, 'strong'); td(F.int(x.n), 'num'); td(f(x.g), 'num'); td(f(x.o), 'num');
+    const a = td(x.pPos == null ? '–' : F.pct(x.pPos), 'num'); if (x.pPos != null) a.title = F.int(x.nPos) + ' diensten';
+    td(x.pNul == null ? '–' : F.pct(x.pNul), 'num');
+    td(x.r == null ? 'te weinig gegevens' : sterkteWoord(x.r) + (Math.abs(x.r) >= 0.1 ? (x.r > 0 ? ', vaker oranje/rood' : ', vaker groen') : ''));
+    tb.appendChild(tr);
+  });
+  // Matrix: alle kolommen plus beleving tegen elkaar
+  const el = $('c-corr'); el.replaceChildren();
+  const vars = [{ label: 'Oranje of rood', get: isOR }].concat(kolommen.map((k) => ({ label: k.label, get: (r) => val(r, k) })))
+    .filter((v) => dien.filter((r) => v.get(r) != null).length >= 20);
+  if (vars.length < 2) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Te weinig gegevens in deze selectie.'; el.appendChild(p); return; }
+  const cells = []; vars.forEach((a, i) => vars.forEach((b, j) => { if (j >= i) return; const pairs = dien.map((r) => [a.get(r), b.get(r)]).filter(([u, w]) => u != null && w != null); cells.push({ i, j, r: pearson(pairs), n: pairs.length }); }));
+  const box = document.createElement('div'); box.style.overflowX = 'auto'; el.appendChild(box);
+  const svg = d3.select(box).append('svg');
+  const tmp = svg.append('text').attr('class', 'lbl'); const lw = d3.max(vars, (v) => { tmp.text(v.label); return tmp.node().getComputedTextLength(); }) + 12; tmp.remove();
+  const cell = Math.max(30, Math.min(46, (Math.max(520, el.clientWidth) - lw) / (vars.length - 1)));
+  const n = vars.length; const TW = lw + (n - 1) * cell + 4; const H = n * cell + 4 - cell + 22;
+  svg.attr('width', TW).attr('height', H).attr('viewBox', `0 0 ${TW} ${H}`);
+  const t = tipFor(el);
+  svg.append('g').selectAll('text').data(vars.slice(1)).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (v, i) => i * cell + cell / 2 + 4).text((v) => v.label);
+  svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (c) => lw + c.j * cell + 1).attr('y', (c) => (c.i - 1) * cell + 1).attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2)
+    .style('fill', (c) => (c.r == null ? 'var(--grid)' : c.r >= 0 ? 'var(--accent)' : 'var(--bad)')).style('fill-opacity', (c) => (c.r == null ? 1 : 0.08 + 0.92 * Math.min(1, Math.abs(c.r) / 0.6)))
+    .on('pointermove', (ev, c) => t.show(ev, vars[c.i].label + ' × ' + vars[c.j].label, [[null, 'Correlatie', c.r == null ? '–' : nl.format('.2f')(c.r) + ' (' + sterkteWoord(c.r) + ')'], [null, 'Diensten', F.int(c.n)]])).on('pointerleave', () => t.hide());
+  svg.append('g').selectAll('text').data(cells.filter((c) => c.r != null)).join('text').attr('class', 'val').attr('x', (c) => lw + c.j * cell + cell / 2).attr('y', (c) => (c.i - 1) * cell + cell / 2 + 4)
+    .attr('text-anchor', 'middle').style('pointer-events', 'none').style('fill', (c) => (Math.abs(c.r) >= 0.35 ? 'var(--bg)' : 'var(--fg)')).text((c) => nl.format('.1f')(c.r));
+  svg.append('g').selectAll('text').data(vars.slice(0, -1)).join('text').attr('x', (v, j) => lw + j * cell + cell / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((v, j) => j + 1);
+  const leg = document.createElement('p'); leg.className = 'note'; leg.textContent = 'Kolommen onderaan: ' + vars.slice(0, -1).map((v, j) => `${j + 1} ${v.label}`).join(' · '); el.appendChild(leg);
 }
 
 function pickThema(code, scroll) {
