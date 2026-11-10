@@ -420,7 +420,7 @@ function extract(book) {
       const vt = col(K.vaartijd); const hw = col(K.herwerk); const np = col(K.planning); const pv = col(K.personeel);
       if (!isNum(vt)) issues.vaartijdX++;
       if (str(hw) && !isNum(hw)) issues.herwerkTekst++;
-      // Sterkte aan dek: een aantal personen; 0 of leeg betekent niet ingevuld (het blanco blad staat vol nullen)
+      // Sterkte aan dek: aantal mensen dat meetelt voor de wettelijke bemanningseis (boven de sterkte, bijv. herintreders, telt niet mee); 0 of leeg betekent niet ingevuld (het blanco blad staat vol nullen)
       const sterkte = sterkteKop && isNum(pv) && pv > 0 ? pv : null;
       if (sterkteKop && sterkte == null) issues.sterkteLeeg++;
       diensten.push({ week, datum: iso(d), dienst, beleving: classify(sh.get(r, K.beleving).fill),
