@@ -423,9 +423,9 @@ const XLSX_READER = (() => {
 /* ===== Weekbladen omzetten naar diensten en meldingen ===== */
 function extract(book) {
   const { sheets, classify } = book;
-  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [] };
+  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [], dienstLeeg: [], geenJaar: [] };
   const kolMap = new Map(); // alle kolommen vanaf D, ook kolommen die later worden toegevoegd
-  const gezien = new Map(); let laatsteJaar = null;
+  const gezien = new Map(); let laatsteJaar = null; let laatsteWeek = null;
   const laagwater = new Set();
   const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
   const parseDateText = (s) => { const m = /(\d{1,2})-(\d{1,2})-(\d{4})/.exec(s || ''); if (!m) return null; const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])); return isNaN(d) || d.getUTCDate() !== +m[1] ? null : d; };
@@ -435,7 +435,11 @@ function extract(book) {
 
   for (const sh of sheets) {
     const m = /week\s*(\d+)(?:\D+(\d{4}))?/i.exec(sh.name); if (!m) continue;
-    const weekNr = Number(m[1]); const jaar = m[2] ? Number(m[2]) : (laatsteJaar || new Date().getFullYear()); laatsteJaar = jaar;
+    const weekNr = Number(m[1]);
+    // Geen jaartal in de bladnaam: jaar van het vorige blad, of het jaar erna als het weeknummer flink terugspringt (bijv. week 1 na week 52)
+    let jaar = m[2] ? Number(m[2]) : (laatsteJaar || new Date().getFullYear());
+    if (!m[2]) { if (laatsteJaar && laatsteWeek && weekNr < laatsteWeek - 26) jaar++; issues.geenJaar.push([sh.name, jaar]); }
+    laatsteJaar = jaar; laatsteWeek = weekNr;
     // Weeksleutel jaar*100+week, zodat week 1 van het volgende jaar na week 52 komt
     const week = jaar * 100 + weekNr;
     if (gezien.has(week)) { issues.dubbel.push(`Blad '${sh.name}' is overgeslagen: week ${weekNr} staat al in blad '${gezien.get(week)}'.`); continue; }
@@ -460,13 +464,19 @@ function extract(book) {
       if (!kolMap.has(key)) kolMap.set(key, { key, label, groep: (/^([A-Z])\s*:/.exec(ruw) || [])[1] || '', weken: [] });
       kolMap.get(key).weken.push(week); kolHier.push([+c, key]);
     }
-    let prev = null;
+    let prev = null; let vorigeDienst = null;
     let r = head + 1;
     for (; r <= sh.maxR; r++) {
-      const a = sh.get(r, 1).v; const dienstRaw = str(sh.get(r, 2).v);
+      const a = sh.get(r, 1).v; let dienstRaw = str(sh.get(r, 2).v);
       if (/totaal/i.test(str(a))) break;
-      if (!dienstRaw) { if (!str(a)) { if (diensten.length && r > head + 16) break; continue; } else break; }
-      const dienst = /^n/i.test(dienstRaw) ? 'Nacht' : 'Dag';
+      if (!dienstRaw) {
+        if (!str(a)) { if (diensten.length && r > head + 16) break; continue; }
+        // Wel een datum maar geen Dag/Nacht: de rij hoort nog bij de tabel. Dienst afleiden uit de vorige rij en melden.
+        if (!isNum(a) && !/^\d{1,2}-\d{1,2}(-\d{2,4})?$/.test(str(a))) break;
+        dienstRaw = vorigeDienst === 'Dag' ? 'Nacht' : 'Dag';
+        issues.dienstLeeg.push(`${sh.name} rij ${r} (aangenomen: ${dienstRaw.toLowerCase()})`);
+      }
+      const dienst = /^n/i.test(dienstRaw) ? 'Nacht' : 'Dag'; vorigeDienst = dienst;
       let d = null;
       if (isNum(a)) d = serialToDate(a); else if (a) d = parseDateText(str(a));
       if (dienst === 'Dag') {
@@ -475,7 +485,8 @@ function extract(book) {
         prev = d;
       } else { if ((d && prev && iso(d) !== iso(prev)) || (!d && str(a) && prev)) issues.datum++; d = prev || d; if (!d) continue; }
       const col = (c) => sh.get(r, c).v;
-      const num = (c) => (isNum(col(c)) ? col(c) : 0);
+      // Telling: getal, of 1 als er tekst staat (bijv. 'ja'), behalve 'x'
+      const num = (c) => { const v = col(c); return isNum(v) ? v : (str(v) && !/^x$/i.test(str(v)) ? 1 : 0); };
       const vt = col(K.vaartijd); const hw = col(K.herwerk); const np = col(K.planning); const pv = col(K.personeel);
       if (!isNum(vt)) issues.vaartijdX++;
       if (str(hw) && !isNum(hw)) issues.herwerkTekst++;
@@ -489,7 +500,8 @@ function extract(book) {
     }
     // Oorzaken en extra opmerkingen
     let mode = null; let lastMelding = null; let conclBuf = null;
-    for (r = r + 1; r <= sh.maxR; r++) {
+    // Begin op de rij waar de tabel stopte: staat de kop 'Oorzaken oranje/rode diensten' direct onder de tabel, dan wordt die zo niet overgeslagen
+    for (; r <= sh.maxR; r++) {
       const texts = [1, 2, 3, 4].map((c) => sh.get(r, c).v).map((v, i) => ({ v, s: str(v), c: i + 1 }));
       const joined = texts.map((t) => t.s).filter(Boolean).join(' ');
       if (!joined) { if (mode === 'extra') mode = null; continue; }
@@ -514,12 +526,13 @@ function extract(book) {
       if (/^evaluatie gebruik ipad/i.test(texts[0].s)) { mode = null; continue; }
       if (mode === 'extra' && lastMelding) { lastMelding.melding = (lastMelding.melding + ' ' + joined).trim(); continue; }
       if (mode === 'oorzaak') {
-        const a = sh.get(r, 1).v; const reden = texts.slice(2).map((t) => t.s).filter(Boolean).join(' ') || (texts[1].s && !/^(dag|nacht)/i.test(texts[1].s) ? texts[1].s : '');
+        const a = sh.get(r, 1).v; const dienstCel = /^(dag|nacht|d|n)(dienst)?\.?$/i.test(texts[1].s);
+        const reden = texts.slice(2).map((t) => t.s).filter(Boolean).join(' ') || (texts[1].s && !dienstCel && !/^(dag|nacht)/i.test(texts[1].s) ? texts[1].s : '');
         let d = isNum(a) ? serialToDate(a) : parseDateText(str(a));
         if (!d && /^\d{1,2}-\d{1,2}$/.test(str(a))) { const x = str(a).split('-'); d = ddmm(+x[0], +x[1]); }
         if (!d && !str(a) && !texts[1].s && lastMelding && lastMelding.week === week) { lastMelding.melding += ' ' + reden; continue; }
         if (!reden) continue;
-        lastMelding = { week, datum: d ? iso(d) : null, dienst: /nacht/i.test(texts[1].s) ? 'Nacht' : 'Dag', melding: reden };
+        lastMelding = { week, datum: d ? iso(d) : null, dienst: (dienstCel ? /^n/i.test(texts[1].s) : /^nacht/i.test(texts[1].s)) ? 'Nacht' : 'Dag', melding: reden };
         meldingen.push(lastMelding);
       }
     }
@@ -645,6 +658,8 @@ function render() {
   if (onb.length) { const li = document.createElement('li'); li.textContent = `${F.int(onb.length)} ${onb.length === 1 ? 'dienst heeft' : 'diensten hebben'} geen herkenbare kleur in kolom Beleving en ${onb.length === 1 ? 'telt' : 'tellen'} niet mee in de kleurgrafieken: ` + onb.slice(0, 6).map((r) => d3.utcFormat('%d-%m')(new Date(r.datum)) + ' ' + r.dienst.toLowerCase()).join(', ') + (onb.length > 6 ? ', …' : '') + '.'; dq.appendChild(li); }
   (D.issues.nieuw || []).forEach(([l, w]) => { const li = document.createElement('li'); li.textContent = `Nieuwe kolom '${l}' gevonden vanaf week ${wl(w)}. Die staat vanzelf bij de registraties en de samenhang.`; dq.appendChild(li); });
   (D.issues.leeg || []).forEach(([l, n]) => { const li = document.createElement('li'); li.textContent = `'${l}' niet (of als 0) ingevuld bij ${F.int(n)} ${n === 1 ? 'dienst' : 'diensten'}.`; dq.appendChild(li); });
+  if (D.issues.dienstLeeg.length) { const n = D.issues.dienstLeeg.length; const li = document.createElement('li'); li.textContent = `Bij ${F.int(n)} ${n === 1 ? 'rij' : 'rijen'} ontbreekt Dag of Nacht in kolom Dienst; de dienst is afgeleid uit de rij erboven: ` + D.issues.dienstLeeg.slice(0, 6).join(', ') + (n > 6 ? ', …' : '') + '.'; dq.appendChild(li); }
+  if (D.issues.geenJaar.length) { const g = D.issues.geenJaar; const li = document.createElement('li'); li.textContent = `${g.length === 1 ? 'Dit blad heeft' : 'Deze bladen hebben'} geen jaartal in de naam, het jaar is aangenomen: ` + g.slice(0, 6).map(([b, j]) => `'${b}' (${j})`).join(', ') + (g.length > 6 ? ', …' : '') + `. Zet het jaar in de bladnaam, bijv. 'Week 1 2027'.`; dq.appendChild(li); }
   D.issues.dubbel.forEach((t) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
   if (!dq.children.length) { const li = document.createElement('li'); li.textContent = 'Niets bijzonders gevonden.'; dq.appendChild(li); }
 }
@@ -1023,7 +1038,9 @@ const INDELING = (() => {
   const secties = () => Array.from(main.children).filter((e) => e.tagName === 'SECTION' && e.id);
   const naam = (sec) => sec.dataset.naam || (sec.querySelector('h2') || {}).textContent || sec.id;
   const standaard = secties().map((sec) => sec.id);
-  const lees = () => { try { return JSON.parse(localStorage.getItem(INDELING_SLEUTEL)) || null; } catch (e) { return null; } };
+  // Een beschadigde of onbekende opgeslagen indeling wordt genegeerd, zodat het dashboard altijd blijft werken
+  const lees = () => { try { const v = JSON.parse(localStorage.getItem(INDELING_SLEUTEL)); if (!v || !Array.isArray(v.volgorde)) return null;
+    return { volgorde: v.volgorde.filter((x) => typeof x === 'string'), verborgen: Array.isArray(v.verborgen) ? v.verborgen.filter((x) => typeof x === 'string') : [] }; } catch (e) { return null; } };
   const bewaar = (st) => { try { localStorage.setItem(INDELING_SLEUTEL, JSON.stringify(st)); } catch (e) { /* opslag niet beschikbaar: alleen voor deze sessie */ } };
   let st = lees() || { volgorde: standaard.slice(), verborgen: [] };
   const opschonen = () => {
