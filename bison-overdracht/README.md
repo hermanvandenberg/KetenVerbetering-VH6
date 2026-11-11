@@ -7,6 +7,7 @@ Dashboard voor de wekelijkse rapportage overdracht van de havendienst Bison (ket
 1. Open het dashboard via de GitHub Pages-link van deze repo.
 2. Klik op **Excel kiezen** (of sleep het bestand op de pagina) en kies de nieuwste `Rapportage overdracht Bison.xlsx`.
 3. Het dashboard vult zich met alle weekbladen. Met de filters bovenaan kies je een periode of alleen dag- of nachtdienst.
+4. Met **Indeling aanpassen** zet je onderdelen hoger of lager of verberg je ze. Die keuze wordt per browser onthouden.
 
 Het Excel wordt alleen in je eigen browser gelezen. Er wordt niets geüpload of opgeslagen, ook niet op GitHub.
 

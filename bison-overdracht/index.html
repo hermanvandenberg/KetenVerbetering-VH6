@@ -59,6 +59,18 @@ b { font-weight: 600; }
 .status.err { color: var(--bad); }
 .filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: .9rem; }
 .filters label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.verborgen { display: none !important; }
+.indeling { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 10px; max-width: 34rem; }
+.indeling h3 { margin: 0; }
+.indeling ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.indeling li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.indeling li:last-child { border-bottom: 0; }
+.indeling li label { flex: 1 1 auto; display: flex; gap: 8px; align-items: center; min-width: 0; cursor: pointer; }
+.indeling li.uit label span { color: var(--muted); text-decoration: line-through; }
+.indeling .pijl { font: inherit; width: 2rem; height: 2rem; border: 1px solid var(--line); border-radius: var(--r); background: transparent; color: var(--fg); cursor: pointer; }
+.indeling .pijl:disabled { opacity: .35; cursor: default; }
+.indeling .acties { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn-licht { font: inherit; background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 14px; cursor: pointer; }
 select, input[type=search] { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 12px; }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
@@ -146,11 +158,18 @@ footer { color: var(--muted); font-size: .8rem; }
       <label for="f-tot">t/m week <select id="f-tot"></select></label>
       <label for="f-dienst">Dienst <select id="f-dienst"><option value="">Dag en nacht</option><option value="Dag">Alleen dag</option><option value="Nacht">Alleen nacht</option></select></label>
       <button class="chips-reset btn" type="button" id="f-reset" style="background:transparent;color:var(--accent);border:1px solid var(--line)">Hele periode</button>
+      <button class="btn-licht" type="button" id="indeling-knop" aria-expanded="false" aria-controls="indeling">Indeling aanpassen</button>
+    </div>
+    <div class="indeling" id="indeling" hidden>
+      <h3>Indeling van het dashboard</h3>
+      <p class="muted small" style="margin:0">Zet onderdelen hoger of lager met de pijltjes, of vink ze uit om ze te verbergen. Je keuze wordt onthouden in deze browser op deze computer.</p>
+      <ol id="indeling-lijst"></ol>
+      <div class="acties"><button class="btn" type="button" id="indeling-klaar">Klaar</button><button class="btn-licht" type="button" id="indeling-standaard">Standaardindeling</button></div>
     </div>
   </header>
 
   <main class="wrap" id="dash" hidden>
-    <section class="tiles" aria-label="Kerncijfers">
+    <section class="tiles" id="kerncijfers" aria-label="Kerncijfers" data-naam="Kerncijfers">
       <div class="tile"><span class="lbl">Diensten in de rapportage</span><span class="val" id="k-diensten">—</span><span class="note">Dag- en nachtdiensten</span></div>
       <div class="tile warn"><span class="lbl">Oranje of rood</span><span class="val" id="k-pct">—</span><span class="note">Van de diensten met overdracht</span></div>
       <div class="tile bad"><span class="lbl">Rode diensten</span><span class="val" id="k-rood">—</span><span class="note">Zwaarste beleving</span></div>
@@ -162,7 +181,7 @@ footer { color: var(--muted); font-size: .8rem; }
     <section id="inzichten">
       <h2>Automatische conclusies</h2>
       <p class="sub">Wat de oorzaken van oranje en rode diensten laten zien, voor de gekozen periode en dienst. Deze zinnen worden met vaste rekenregels uit de meldingen afgeleid (geen AI). Ze zijn een startpunt: lees de meldingen erbij voordat je er conclusies aan verbindt.</p>
-      <div class="card"><ul class="inzichten" id="inzichten"></ul></div>
+      <div class="card"><ul class="inzichten" id="inzichten-lijst"></ul></div>
     </section>
 
     <section id="beleving">
@@ -906,7 +925,7 @@ function drawConclusies(list, weeks, dien, meld) {
 /* ===== Automatische conclusies (vaste regels, geen AI) ===== */
 const RECENT_WEKEN = 4; // hoeveel laatste weken als 'recent' tellen voor trends
 function drawInzichten(D, dien, meld, weeks) {
-  const lijst = $('inzichten'); lijst.replaceChildren();
+  const lijst = $('inzichten-lijst'); lijst.replaceChildren();
   const out = []; // { soort, klasse, tekst, thema }
   const pct = (a, b) => (b ? F.pct(a / b) : '–');
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
@@ -996,6 +1015,48 @@ function drawInzichten(D, dien, meld, weeks) {
     li.append(s, body); lijst.appendChild(li);
   });
 }
+
+/* ===== Indeling: volgorde en zichtbaarheid van onderdelen, per browser onthouden ===== */
+const INDELING_SLEUTEL = 'bison-indeling-v1';
+const INDELING = (() => {
+  const main = $('dash');
+  const secties = () => Array.from(main.children).filter((e) => e.tagName === 'SECTION' && e.id);
+  const naam = (sec) => sec.dataset.naam || (sec.querySelector('h2') || {}).textContent || sec.id;
+  const standaard = secties().map((sec) => sec.id);
+  const lees = () => { try { return JSON.parse(localStorage.getItem(INDELING_SLEUTEL)) || null; } catch (e) { return null; } };
+  const bewaar = (st) => { try { localStorage.setItem(INDELING_SLEUTEL, JSON.stringify(st)); } catch (e) { /* opslag niet beschikbaar: alleen voor deze sessie */ } };
+  let st = lees() || { volgorde: standaard.slice(), verborgen: [] };
+  const opschonen = () => {
+    st.volgorde = st.volgorde.filter((id) => standaard.includes(id));
+    standaard.forEach((id, i) => { if (!st.volgorde.includes(id)) st.volgorde.splice(Math.min(i, st.volgorde.length), 0, id); });
+    st.verborgen = (st.verborgen || []).filter((id) => standaard.includes(id));
+  };
+  const toepassen = () => {
+    opschonen();
+    st.volgorde.forEach((id) => { const el = $(id); if (el) { main.appendChild(el); el.classList.toggle('verborgen', st.verborgen.includes(id)); } });
+  };
+  const tekenLijst = () => {
+    const ol = $('indeling-lijst'); ol.replaceChildren();
+    st.volgorde.forEach((id, i) => {
+      const sec = $(id); if (!sec) return;
+      const uit = st.verborgen.includes(id);
+      const li = document.createElement('li'); if (uit) li.className = 'uit';
+      const lab = document.createElement('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !uit; cb.id = 'ind-' + id;
+      const sp = document.createElement('span'); sp.textContent = naam(sec); lab.htmlFor = cb.id; lab.append(cb, sp);
+      cb.addEventListener('change', () => { st.verborgen = cb.checked ? st.verborgen.filter((x) => x !== id) : [...st.verborgen, id]; wijzig(); });
+      const pijl = (txt, label, d) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pijl'; b.textContent = txt; b.setAttribute('aria-label', naam(sec) + ' ' + label);
+        const j = i + d; b.disabled = j < 0 || j >= st.volgorde.length;
+        b.addEventListener('click', () => { const v = st.volgorde; [v[i], v[j]] = [v[j], v[i]]; wijzig(); const nb = $('indeling-lijst').children[j]; if (nb) (nb.querySelectorAll('.pijl')[d < 0 ? 0 : 1] || nb).focus(); }); return b; };
+      li.append(lab, pijl('↑', 'omhoog', -1), pijl('↓', 'omlaag', 1)); ol.appendChild(li);
+    });
+  };
+  const wijzig = () => { bewaar(st); toepassen(); tekenLijst(); if (S.data) render(); };
+  $('indeling-knop').addEventListener('click', () => { const p = $('indeling'); p.hidden = !p.hidden; $('indeling-knop').setAttribute('aria-expanded', String(!p.hidden)); if (!p.hidden) tekenLijst(); });
+  $('indeling-klaar').addEventListener('click', () => { $('indeling').hidden = true; $('indeling-knop').setAttribute('aria-expanded', 'false'); $('indeling-knop').focus(); });
+  $('indeling-standaard').addEventListener('click', () => { st = { volgorde: standaard.slice(), verborgen: [] }; wijzig(); });
+  toepassen();
+  return { toepassen };
+})();
 
 /* ===== Laden en bediening ===== */
 function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classList.toggle('err', !!err); }
