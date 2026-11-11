@@ -112,10 +112,19 @@ td.rank { font-family: var(--display); font-size: 1.3rem; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .controls input { flex: 1 1 14rem; max-width: 26rem; min-width: 0; }
 ul.list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80ch; }
+.inzichten { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.inzicht { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 4px 14px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.inzicht:last-child { border-bottom: 0; }
+.inzicht .soort { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding-top: 3px; }
+.inzicht .soort.let-op { color: var(--bad); } .inzicht .soort.trend { color: var(--warn); } .inzicht .soort.aanpak { color: var(--ok); }
+.inzicht p { margin: 0; max-width: 85ch; }
+.inzicht .link { font: inherit; font-size: .8rem; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; justify-self: start; }
+@media (max-width: 560px) { .inzicht { grid-template-columns: minmax(0, 1fr); } }
 .concl { display: grid; gap: 10px; }
 .concl details { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
 .concl summary { cursor: pointer; font-weight: 600; }
 .concl p { margin: 6px 0 0; max-width: 80ch; color: var(--muted); }
+.concl p b { color: var(--fg); }
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 footer { color: var(--muted); font-size: .8rem; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
@@ -148,6 +157,12 @@ footer { color: var(--muted); font-size: .8rem; }
       <div class="tile"><span class="lbl">Gem. actieve vaartijd</span><span class="val" id="k-vaart">—</span><span class="note">Uur per dienst, waar ingevuld</span></div>
       <div class="tile"><span class="lbl">Geen overdracht ontvangen</span><span class="val" id="k-geen">—</span><span class="note">Diensten zonder ingevuld formulier</span></div>
       <div class="tile bad"><span class="lbl">Veiligheidsmeldingen</span><span class="val" id="k-veilig">—</span><span class="note">Ongevallen en onveilige situaties</span></div>
+    </section>
+
+    <section id="inzichten">
+      <h2>Automatische conclusies</h2>
+      <p class="sub">Wat de oorzaken van oranje en rode diensten laten zien, voor de gekozen periode en dienst. Deze zinnen worden met vaste rekenregels uit de meldingen afgeleid (geen AI). Ze zijn een startpunt: lees de meldingen erbij voordat je er conclusies aan verbindt.</p>
+      <div class="card"><ul class="inzichten" id="inzichten"></ul></div>
     </section>
 
     <section id="beleving">
@@ -235,7 +250,7 @@ footer { color: var(--muted); font-size: .8rem; }
 
     <section id="conclusies">
       <h2>Conclusies per week</h2>
-      <p class="sub">De algemene conclusie die in het weekblad is geschreven, nieuwste eerst.</p>
+      <p class="sub">Elke week, nieuwste eerst. "Uit het weekblad" is de conclusie die je collega heeft geschreven. "Uit de cijfers" wordt automatisch opgesteld uit de diensten en meldingen van die week, ook voor weken zonder geschreven conclusie.</p>
       <div class="card concl" id="concl"></div>
     </section>
 
@@ -602,7 +617,8 @@ function render() {
   drawMinis(weeks, dien, D.kolommen);
   drawSamenhang(dien, D.kolommen);
   drawChips(); drawMeldingen();
-  drawConclusies(D.conclusies.filter((c) => inRange(c.week)));
+  drawConclusies(D.conclusies.filter((c) => inRange(c.week)), weeks, dien, meld);
+  drawInzichten(D, dien, meld, weeks);
   const dq = $('dq'); dq.replaceChildren();
   [[`${F.int(st.geen)} diensten zonder ontvangen overdracht (roze).`, st.geen], [`Vaartijd niet als getal ingevuld bij ${F.int(D.issues.vaartijdX)} diensten.`, D.issues.vaartijdX], [`Herwerk ${F.int(D.issues.herwerkTekst)} keer als tekst in plaats van een aantal.`, D.issues.herwerkTekst], [`${F.int(D.issues.datum)} datums leken verkeerd getypt en zijn op volgorde gecorrigeerd.`, D.issues.datum], [`${F.int(meld.filter((m) => !m.themas.length).length)} meldingen konden niet aan een thema worden gekoppeld.`, meld.filter((m) => !m.themas.length).length]]
     .filter(([, n]) => n > 0).forEach(([t]) => { const li = document.createElement('li'); li.textContent = t; dq.appendChild(li); });
@@ -852,11 +868,133 @@ function drawMeldingen() {
     td(m.partijen.join(', ')); tb.appendChild(tr);
   });
 }
-function drawConclusies(list) {
+// Stelt voor één week een korte conclusie op uit de diensten en meldingen van die week (vaste regels, geen AI).
+function weekConclusie(week, dien, meld) {
+  const rs = dien.filter((r) => r.week === week); const ms = meld.filter((m) => m.week === week);
+  const st = statsOf(rs); const delen = [];
+  const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+  if (st.met) {
+    const zw = st.oranje + st.rood;
+    delen.push(zw ? `${F.int(zw)} van de ${F.int(st.met)} diensten met overdracht ${zw === 1 ? 'was' : 'waren'} oranje of rood` + (st.rood ? ` (${F.int(st.rood)} rood).` : '.') : `Alle ${F.int(st.met)} diensten met overdracht waren groen.`);
+  }
+  if (st.geen) delen.push(`Bij ${F.int(st.geen)} ${st.geen === 1 ? 'dienst is' : 'diensten is'} geen overdracht ontvangen.`);
+  const th = THEMAS.map((t) => ({ naam: t.naam, n: ms.filter((m) => m.themas.includes(t.code)).length })).filter((t) => t.n).sort((a, b) => b.n - a.n);
+  if (th.length) delen.push(`In de toelichtingen speelt vooral ${lc(th[0].naam)}` + (th[1] ? `, gevolgd door ${lc(th[1].naam)}.` : '.'));
+  const pt = PARTIJEN.map((p) => ({ naam: p.naam, n: ms.filter((m) => m.partijen.includes(p.naam)).length })).filter((p) => p.n).sort((a, b) => b.n - a.n);
+  if (pt.length) delen.push(`Genoemde partijen: ${pt.slice(0, 3).map((p) => p.naam).join(', ')}.`);
+  if (ms.some((m) => m.themas.includes('veil'))) delen.push('Er is een veiligheidsmelding gedaan.');
+  if (th.length) {
+    const opl = OPLOSSINGEN.map((o) => ({ ...o, n: ms.filter((m) => m.themas.some((c) => o.themas.includes(c))).length })).sort((a, b) => b.n - a.n || b.weken.length - a.weken.length)[0];
+    if (opl && opl.n) delen.push(`Passende aanpak: ${lc(opl.oplossing)}.`);
+  } else if (st.oranje + st.rood) delen.push('Er is geen toelichting gegeven bij de oranje of rode diensten.');
+  return delen.join(' ');
+}
+function drawConclusies(list, weeks, dien, meld) {
   const box = $('concl'); box.replaceChildren();
-  const items = list.filter((c) => c.tekst).sort((a, b) => b.week - a.week);
+  const items = weeks.slice().sort((a, b) => b - a).map((w) => ({ week: w, eigen: (list.find((c) => c.week === w && c.tekst) || {}).tekst || '', auto: weekConclusie(w, dien, meld) }))
+    .filter((c) => c.eigen || c.auto);
   $('conclusies').hidden = !items.length;
-  items.forEach((c, i) => { const d = document.createElement('details'); if (i === 0) d.open = true; const s = document.createElement('summary'); s.textContent = 'Week ' + wl(c.week); const p = document.createElement('p'); p.textContent = c.tekst; d.append(s, p); box.appendChild(d); });
+  items.forEach((c, i) => {
+    const d = document.createElement('details'); if (i === 0) d.open = true;
+    const s = document.createElement('summary'); s.textContent = 'Week ' + wl(c.week) + (c.eigen ? '' : ' (automatisch)'); d.appendChild(s);
+    if (c.eigen) { const p = document.createElement('p'); const b = document.createElement('b'); b.textContent = 'Uit het weekblad: '; p.append(b, c.eigen); d.appendChild(p); }
+    if (c.auto) { const p = document.createElement('p'); const b = document.createElement('b'); b.textContent = 'Uit de cijfers: '; p.append(b, c.auto); d.appendChild(p); }
+    box.appendChild(d);
+  });
+}
+
+/* ===== Automatische conclusies (vaste regels, geen AI) ===== */
+const RECENT_WEKEN = 4; // hoeveel laatste weken als 'recent' tellen voor trends
+function drawInzichten(D, dien, meld, weeks) {
+  const lijst = $('inzichten'); lijst.replaceChildren();
+  const out = []; // { soort, klasse, tekst, thema }
+  const pct = (a, b) => (b ? F.pct(a / b) : '–');
+  const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+  const nM = meld.length;
+  const telThema = (ms) => THEMAS.map((t) => ({ code: t.code, naam: t.naam, n: ms.filter((m) => m.themas.includes(t.code)).length })).sort((a, b) => b.n - a.n);
+  const telPartij = (ms) => PARTIJEN.map((p) => ({ naam: p.naam, n: ms.filter((m) => m.partijen.includes(p.naam)).length })).filter((p) => p.n).sort((a, b) => b.n - a.n);
+
+  // Koppel elke melding aan de beleving van haar dienst (zelfde datum en dienst).
+  const belevingVan = new Map(dien.map((r) => [r.datum + '|' + r.dienst, r.beleving]));
+  meld.forEach((m) => { m._bel = belevingVan.get(m.datum + '|' + m.dienst) || null; });
+
+  if (!nM) {
+    out.push({ soort: 'Let op', klasse: 'let-op', tekst: 'In deze periode zijn geen toelichtingen bij oranje of rode diensten gevonden, dus er zijn geen conclusies te trekken.' });
+  } else {
+    // 1. Hoofdoorzaak, met wie er het vaakst bij betrokken is
+    const th = telThema(meld); const top = th[0];
+    if (top.n) {
+      const pt = telPartij(meld.filter((m) => m.themas.includes(top.code)));
+      let t = `${top.naam} is de belangrijkste oorzaak: het speelt in ${F.int(top.n)} van de ${F.int(nM)} meldingen (${pct(top.n, nM)}).`;
+      if (pt.length) t += ` Daarbij wordt ${pt[0].naam} het vaakst genoemd (${F.int(pt[0].n)} keer).`;
+      if (th[1] && th[1].n) t += ` Daarna volgen ${lc(th[1].naam)} (${F.int(th[1].n)})` + (th[2] && th[2].n ? ` en ${lc(th[2].naam)} (${F.int(th[2].n)}).` : '.');
+      out.push({ soort: 'Hoofdoorzaak', klasse: 'let-op', tekst: t, thema: top.code });
+    }
+    // 2. Wat speelt bij rode diensten
+    const rood = meld.filter((m) => m._bel === 'Rood');
+    if (rood.length >= 2) {
+      const tr = telThema(rood).filter((t) => t.n);
+      if (tr.length) out.push({ soort: 'Rode diensten', klasse: 'let-op', tekst: `Bij de ${F.int(rood.length)} toelichtingen van rode diensten gaat het vooral om ${lc(tr[0].naam)} (${F.int(tr[0].n)}×)` + (tr[1] ? ` en ${lc(tr[1].naam)} (${F.int(tr[1].n)}×).` : '.'), thema: tr[0].code });
+    }
+    // 3. Trends: laatste weken tegenover de weken daarvoor (per week gemiddeld)
+    if (weeks.length >= RECENT_WEKEN + 3) {
+      const recent = new Set(weeks.slice(-RECENT_WEKEN)); const ervoor = weeks.length - RECENT_WEKEN;
+      const per = (ms, set, n) => ms.filter((m) => set(m.week)).length / n;
+      const veranderd = THEMAS.map((t) => {
+        const ms = meld.filter((m) => m.themas.includes(t.code));
+        const nu = per(ms, (w) => recent.has(w), RECENT_WEKEN), toen = per(ms, (w) => !recent.has(w), ervoor);
+        return { ...t, nu, toen, d: nu - toen };
+      });
+      const stijger = veranderd.filter((t) => t.d >= 0.5 && t.nu >= 1).sort((a, b) => b.d - a.d)[0];
+      const daler = veranderd.filter((t) => t.d <= -0.5 && t.toen >= 1).sort((a, b) => a.d - b.d)[0];
+      const per1 = (v) => F.dec1(v).replace(',0', '');
+      if (stijger) out.push({ soort: 'Neemt toe', klasse: 'trend', tekst: `${stijger.naam} komt de laatste ${RECENT_WEKEN} weken vaker voor: gemiddeld ${per1(stijger.nu)} meldingen per week, tegen ${per1(stijger.toen)} per week daarvoor.`, thema: stijger.code });
+      if (daler) out.push({ soort: 'Neemt af', klasse: 'aanpak', tekst: `${daler.naam} wordt de laatste ${RECENT_WEKEN} weken minder genoemd: gemiddeld ${per1(daler.nu)} per week, tegen ${per1(daler.toen)} per week daarvoor.`, thema: daler.code });
+      const dR = dien.filter((r) => recent.has(r.week)), dE = dien.filter((r) => !recent.has(r.week));
+      const sR = statsOf(dR), sE = statsOf(dE);
+      if (sR.pct != null && sE.pct != null && Math.abs(sR.pct - sE.pct) >= 0.08) out.push({ soort: sR.pct > sE.pct ? 'Wordt zwaarder' : 'Wordt lichter', klasse: sR.pct > sE.pct ? 'trend' : 'aanpak', tekst: `De laatste ${RECENT_WEKEN} weken was ${F.pct(sR.pct)} van de diensten oranje of rood, tegen ${F.pct(sE.pct)} in de weken daarvoor.` });
+    }
+    // 4. Structureel: thema dat in de meeste weken terugkomt
+    const wekenMet = THEMAS.map((t) => ({ ...t, w: new Set(meld.filter((m) => m.themas.includes(t.code)).map((m) => m.week)).size })).sort((a, b) => b.w - a.w)[0];
+    if (wekenMet && weeks.length >= 4 && wekenMet.w / weeks.length >= 0.5) out.push({ soort: 'Structureel', klasse: 'let-op', tekst: `${wekenMet.naam} komt terug in ${F.int(wekenMet.w)} van de ${F.int(weeks.length)} weken. Dat is geen incident maar een terugkerend probleem in de keten.`, thema: wekenMet.code });
+    // 5. Thema's die vaak samen voorkomen
+    const paren = [];
+    THEMAS.forEach((a, i) => THEMAS.slice(i + 1).forEach((b) => { const n = meld.filter((m) => m.themas.includes(a.code) && m.themas.includes(b.code)).length; if (n) paren.push({ a, b, n }); }));
+    paren.sort((x, y) => y.n - x.n);
+    if (paren[0] && paren[0].n >= 3) out.push({ soort: 'Hangt samen', tekst: `${paren[0].a.naam} en ${lc(paren[0].b.naam)} worden ${F.int(paren[0].n)} keer in dezelfde melding genoemd. Wie het ene aanpakt, pakt waarschijnlijk ook een deel van het andere aan.` });
+    // 6. Partij met het grootste aandeel
+    const pAll = telPartij(meld);
+    if (pAll.length) {
+      const p = pAll[0]; const tp = telThema(meld.filter((m) => m.partijen.includes(p.naam)))[0];
+      out.push({ soort: 'Ketenpartner', tekst: `${p.naam} wordt in ${F.int(p.n)} meldingen genoemd (${pct(p.n, nM)}), het vaakst in combinatie met ${lc(tp.naam)}.` + (pAll[1] ? ` Daarna volgt ${pAll[1].naam} (${F.int(pAll[1].n)}).` : ''), thema: tp.code });
+    }
+  }
+  // 7. Dag tegenover nacht
+  const sD = statsOf(dien.filter((r) => r.dienst === 'Dag')), sN = statsOf(dien.filter((r) => r.dienst === 'Nacht'));
+  if (!S.dienst && sD.pct != null && sN.pct != null && Math.abs(sD.pct - sN.pct) >= 0.1) {
+    const zw = sD.pct > sN.pct ? ['dagdienst', sD, 'Dag'] : ['nachtdienst', sN, 'Nacht'], lt = sD.pct > sN.pct ? sN : sD;
+    const tz = telThema(meld.filter((m) => m.dienst === zw[2]))[0];
+    out.push({ soort: 'Dag en nacht', tekst: `De ${zw[0]} is duidelijk zwaarder: ${F.pct(zw[1].pct)} oranje of rood, tegen ${F.pct(lt.pct)} bij de andere dienst.` + (tz && tz.n ? ` In de ${zw[0]} gaat het vooral om ${lc(tz.naam)}.` : ''), thema: tz && tz.n ? tz.code : null });
+  }
+  // 8. Aanbevolen aanpak: oplossing die de meeste meldingen raakt
+  if (nM) {
+    const best = OPLOSSINGEN.map((o) => ({ ...o, n: meld.filter((m) => m.themas.some((c) => o.themas.includes(c))).length })).sort((a, b) => b.n - a.n || b.weken.length - a.weken.length);
+    if (best[0] && best[0].n) out.push({ soort: 'Eerste aanpak', klasse: 'aanpak', tekst: `"${best[0].oplossing}" raakt de meeste meldingen (${F.int(best[0].n)} van ${F.int(nM)}).` + (best[1] ? ` Ook kansrijk: "${best[1].oplossing}" (${F.int(best[1].n)}).` : '') });
+  }
+  // 9. Diensten zonder toelichting
+  const metToel = new Set(meld.map((m) => m.datum + '|' + m.dienst));
+  const zonder = dien.filter((r) => (r.beleving === 'Oranje' || r.beleving === 'Rood') && !metToel.has(r.datum + '|' + r.dienst));
+  const orTot = dien.filter((r) => r.beleving === 'Oranje' || r.beleving === 'Rood').length;
+  if (zonder.length && orTot) out.push({ soort: 'Ontbreekt', klasse: 'trend', tekst: `${F.int(zonder.length)} van de ${F.int(orTot)} oranje of rode diensten (${pct(zonder.length, orTot)}) hebben geen toelichting. Die oorzaken zitten dus niet in deze conclusies; vraag de bemanning om bij elke oranje of rode dienst een reden te noteren.` });
+
+  out.forEach((o) => {
+    const li = document.createElement('li'); li.className = 'inzicht';
+    const s = document.createElement('span'); s.className = 'soort' + (o.klasse ? ' ' + o.klasse : ''); s.textContent = o.soort;
+    const body = document.createElement('div'); body.style.display = 'grid'; body.style.gap = '4px';
+    const p = document.createElement('p'); p.textContent = o.tekst; body.appendChild(p);
+    if (o.thema) { const b = document.createElement('button'); b.type = 'button'; b.className = 'link'; b.textContent = 'Bekijk de meldingen'; b.addEventListener('click', () => { S.thema = null; pickThema(o.thema, true); }); body.appendChild(b); }
+    li.append(s, body); lijst.appendChild(li);
+  });
 }
 
 /* ===== Laden en bediening ===== */
