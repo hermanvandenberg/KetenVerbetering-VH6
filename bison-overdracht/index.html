@@ -139,6 +139,35 @@ ul.list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80
 .concl p b { color: var(--fg); }
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 footer { color: var(--muted); font-size: .8rem; }
+/* Meetpunten vergelijken, grafiekkeuze, verbeteracties */
+:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; } }
+:root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; flex: none; }
+.seg button { font: inherit; font-size: .8rem; padding: 4px 10px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.kaartkop { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.rij { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.rij label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: .9rem; }
+.rij label, .kaartkop label { max-width: 100%; min-width: 0; flex-wrap: wrap; }
+.rij select, .kaartkop select { max-width: min(100%, 22rem); min-width: 0; }
+.rij .duw { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.uitkomst { margin: 0; display: grid; gap: 4px; max-width: 90ch; }
+.uitkomst p { margin: 0; }
+.link-knop { font: inherit; font-size: .8rem; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.chart .klik { cursor: pointer; }
+.print-alleen { display: none; }
+@media print {
+  :root:root:not([data-theme="none"]) { --bg: #ffffff; --panel: #ffffff; --fg: #15212c; --muted: #4b5865; --line: #d5dbe1; --accent: #1d5a8c; --accent-soft: #d6e4f0;
+    --ok: #2f8a4c; --warn: #d98a12; --bad: #c8372d; --none: #b7a6c9; --grid: #e8edf1; --axis: #b9c3cc; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; color-scheme: light; }
+  body { padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .loader, .filters, .indeling, .seg, .duw, .link-knop, .inzicht .link, footer { display: none !important; }
+  .card, tr { break-inside: avoid; }
+  .tablebox { max-height: none; overflow: visible; }
+  body.print-vgl #dash > section:not(#vergelijken), body.print-vgl .head .lede { display: none !important; }
+  body.print-vgl .print-alleen { display: block; }
+}
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 </head>
@@ -230,26 +259,64 @@ footer { color: var(--muted); font-size: .8rem; }
       </div>
     </section>
 
+    <section id="verbeteracties" data-naam="Verbeteracties uit de weekbladen">
+      <h2>Verbeteracties uit de weekbladen</h2>
+      <p class="sub">De tabellen met knelpunten en verbetervoorstellen staan in het Excel als plaatje. Het dashboard leest die plaatjes in je eigen browser en zet de tekst hieronder. Het lezen gaat automatisch, dus een enkel woord kan verkeerd gelezen zijn: kijk bij twijfel in het weekblad.</p>
+      <div class="card">
+        <p class="note" id="va-status" role="status"></p>
+        <div class="controls"><label for="va-zoek" class="muted small">Zoeken</label><input id="va-zoek" type="search" placeholder="Bijv. planning, anker, HGK"><span class="muted small"><span id="n-va">0</span> verbeteracties</span></div>
+        <div class="tablebox"><table>
+          <thead><tr><th>Week</th><th>Knelpunt</th><th>Verbetervoorstel</th><th>Thema's</th></tr></thead>
+          <tbody id="t-va"></tbody>
+        </table></div>
+      </div>
+    </section>
+
     <section id="registraties">
       <h2>Registraties per week</h2>
-      <p class="sub">Elke kolom uit de weekbladen, ook kolommen die later zijn toegevoegd. Tellingen staan per week opgeteld, metingen (zoals vaartijd of sterkte) als gemiddelde per dienst. Elke grafiek heeft een eigen schaal.</p>
+      <p class="sub">Elke kolom uit de weekbladen, ook kolommen die later zijn toegevoegd. Tellingen staan per week opgeteld, metingen (zoals vaartijd of sterkte) als gemiddelde per dienst. Elke grafiek heeft een eigen schaal. Per grafiek kies je zelf een lijn of staven.</p>
+      <div class="rij"><span class="muted small">Alle grafieken:</span><span id="minis-alle"></span></div>
       <div class="grid-3" id="minis"></div>
+    </section>
+
+    <section id="vergelijken" data-naam="Meetpunten vergelijken">
+      <h2>Meetpunten vergelijken</h2>
+      <p class="sub">Kies zelf twee of drie meetpunten en leg ze over elkaar. Elk meetpunt kan: de kolommen uit het Excel, de beleving, het aantal meldingen en elk thema uit de meldingen. Berekend binnen de gekozen periode en dienst. Een verband zegt niets over oorzaak en gevolg.</p>
+      <p class="print-alleen" id="vgl-print"></p>
+      <div class="card">
+        <div class="rij">
+          <label for="vgl-a">Meetpunt 1 <select id="vgl-a"></select></label>
+          <label for="vgl-b">Meetpunt 2 <select id="vgl-b"></select></label>
+          <label for="vgl-c">Meetpunt 3 <select id="vgl-c"></select></label>
+        </div>
+        <div class="rij"><span id="vgl-opties" class="rij"></span>
+          <span class="duw"><button class="btn-licht" type="button" id="vgl-csv-week">CSV per week</button><button class="btn-licht" type="button" id="vgl-csv-dienst">CSV per dienst (alle meetpunten)</button><button class="btn-licht" type="button" id="vgl-pdf">PDF</button></span>
+        </div>
+        <div class="uitkomst" id="vgl-tekst" aria-live="polite"></div>
+      </div>
+      <div class="grid">
+        <div class="card"><h3>Per week, over elkaar</h3><p class="note" id="vgl-noot"></p><ul class="legend" id="vgl-legend"></ul><div class="chart" id="c-vgl-week"></div></div>
+        <div class="card"><h3 id="vgl-dienst-titel">Per dienst</h3><p class="note">Elke stip is één dienst, gekleurd naar de beleving. Stippen liggen iets verspreid zodat ze niet over elkaar vallen. De streep laat de lijn van het verband zien.</p>
+          <ul class="legend"><li><span class="sw" style="background:var(--ok)"></span>Groen</li><li><span class="sw" style="background:var(--warn)"></span>Oranje</li><li><span class="sw" style="background:var(--bad)"></span>Rood</li><li><span class="sw" style="background:var(--axis)"></span>Overig</li></ul>
+          <div class="chart" id="c-vgl-dienst"></div></div>
+      </div>
+      <div class="card"><details id="vgl-tabel-box"><summary class="small">Cijfers per week als tabel</summary><div class="tablebox" style="margin-top:8px"><table id="t-vgl"></table></div></details></div>
     </section>
 
     <section id="samenhang">
       <h2>Samenhang</h2>
-      <p class="sub">Hoe hangen de kolommen samen met de beleving en met elkaar? Berekend per dienst, binnen de gekozen periode en dienstfilter. Een nieuwe kolom in het Excel komt hier vanzelf bij. Een verband zegt niets over oorzaak en gevolg, en bij weinig diensten is het onzeker.</p>
+      <p class="sub">Hoe hangen de meetpunten met elkaar samen? Berekend per dienst, binnen de gekozen periode en dienstfilter. Een nieuwe kolom in het Excel komt hier vanzelf bij. Een verband zegt niets over oorzaak en gevolg, en bij weinig diensten is het onzeker.</p>
       <div class="card">
-        <h3>Verband met de beleving</h3>
-        <p class="note">Gemiddelde per dienst bij groene en bij oranje of rode diensten. Bij tellingen ook hoe vaak een dienst oranje of rood was als de kolom wel of niet voorkwam. Gesorteerd op de sterkte van het verband.</p>
+        <div class="kaartkop"><h3>Alles vergeleken met één meetpunt</h3><label for="samen-doel" class="muted small" style="display:inline-flex;gap:6px;align-items:center">Vergelijk alles met <select id="samen-doel"></select></label></div>
+        <p class="note">Elk ander meetpunt naast het gekozen meetpunt, gesorteerd op de sterkte van het verband. Met "Bekijk" zie je het paar in de grafieken hierboven.</p>
         <div class="tablebox"><table>
-          <thead><tr><th>Kolom</th><th class="num">Diensten</th><th class="num">Gem. bij groen</th><th class="num">Gem. bij oranje/rood</th><th class="num">Oranje/rood als &gt; 0</th><th class="num">Oranje/rood als 0</th><th>Verband</th></tr></thead>
+          <thead><tr><th>Meetpunt</th><th class="num">Diensten</th><th class="num" id="samen-ja">Gem. als ja</th><th class="num" id="samen-nee">Gem. als nee</th><th class="num">Correlatie</th><th>Verband</th><th></th></tr></thead>
           <tbody id="t-samen"></tbody>
         </table></div>
       </div>
       <div class="card">
-        <h3>Kolommen tegen elkaar</h3>
-        <p class="note">Correlatie per dienst (−1 tot 1). Blauw: gaan samen omhoog. Rood: als de een stijgt, daalt de ander. Hoe voller de kleur, hoe sterker. Een leeg vak betekent te weinig diensten (minder dan 20) of een kolom die niet varieert.</p>
+        <h3>Meetpunten tegen elkaar</h3>
+        <p class="note">Correlatie per dienst (−1 tot 1) tussen de kolommen uit het Excel, de beleving en het aantal meldingen. Blauw: gaan samen omhoog. Rood: als de een stijgt, daalt de ander. Hoe voller de kleur, hoe sterker. Een leeg vak betekent te weinig diensten (minder dan 20) of een meetpunt dat niet varieert. Klik op een vak om dat paar te vergelijken.</p>
         <div class="chart" id="c-corr"></div>
       </div>
     </section>
@@ -282,7 +349,7 @@ footer { color: var(--muted); font-size: .8rem; }
             <li>Vul de vaartijd altijd in als getal; 0 als er niet gevaren is.</li>
             <li>Noteer herwerk als aantal, met de oorzaak in de toelichting.</li>
             <li>Houd per weekblad dezelfde indeling aan: tabel bovenaan, dan "Oorzaken oranje/rode diensten", dan "Mogelijke verbeteracties" en de conclusie.</li>
-            <li>Zet verbeteracties als tekst in plaats van als plaatje, zodat ze meegenomen kunnen worden.</li>
+            <li>Plaatjes met verbeteracties worden gelezen, maar tekst in de cellen is betrouwbaarder. Gebruik bij een plaatje een tabel met de kop Knelpunt en Verbetervoorstel.</li>
             <li>Noem in de toelichting de betrokken partij (HGK, EECV, EMO, VH, stuurstand, KVB).</li>
           </ul>
         </div>
@@ -413,9 +480,29 @@ const XLSX_READER = (() => {
         cells.set(ref.r + ':' + ref.c, { v, fill });
         if (ref.r > maxR) maxR = ref.r;
       });
-      sheets.push({ name: s.getAttribute('name'), get: (r, c) => cells.get(r + ':' + c) || { v: null, fill: null }, maxR });
+      sheets.push({ name: s.getAttribute('name'), get: (r, c) => cells.get(r + ':' + c) || { v: null, fill: null }, maxR, afb: await plaatjes(target) });
     }
-    return { sheets, classify };
+    return { sheets, classify, bestand: (pad) => { const f = zip.file(pad); return f ? f.async('uint8array') : null; } };
+
+    // Plaatjes op een blad (bijv. de tabellen met verbeteracties): rij waar ze staan en pad in het bestand
+    async function plaatjes(target) {
+      const RELNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+      const pad = (basis, doel) => { const delen = basis.split('/').slice(0, -1); doel.split('/').forEach((d) => { if (d === '..') delen.pop(); else if (d && d !== '.') delen.push(d); }); return delen.join('/'); };
+      const sheetPad = 'xl/' + target; const relsPad = sheetPad.replace(/([^/]+)$/, '_rels/$1.rels');
+      const rx = await txt(relsPad); if (!rx) return [];
+      const uit = [];
+      for (const rel of els(parse(rx), 'Relationship').filter((r) => /\/drawing$/.test(r.getAttribute('Type') || ''))) {
+        const tekPad = pad(sheetPad, rel.getAttribute('Target')); const tx = await txt(tekPad); if (!tx) continue;
+        const tdx = await txt(tekPad.replace(/([^/]+)$/, '_rels/$1.rels')); if (!tdx) continue;
+        const media = {}; els(parse(tdx), 'Relationship').forEach((r) => { media[r.getAttribute('Id')] = pad(tekPad, r.getAttribute('Target')); });
+        const td = parse(tx);
+        ['twoCellAnchor', 'oneCellAnchor'].forEach((soort) => els(td, soort).forEach((a) => {
+          const van = els(a, 'from')[0]; const rij = van ? Number((els(van, 'row')[0] || {}).textContent) + 1 : 0;
+          els(a, 'blip').forEach((b) => { const id = b.getAttributeNS(RELNS, 'embed') || b.getAttribute('r:embed'); if (media[id] && /\.(png|jpe?g|gif|bmp|webp)$/i.test(media[id])) uit.push({ rij, pad: media[id] }); });
+        }));
+      }
+      return uit;
+    }
   }
   return { read };
 })();
@@ -423,7 +510,7 @@ const XLSX_READER = (() => {
 /* ===== Weekbladen omzetten naar diensten en meldingen ===== */
 function extract(book) {
   const { sheets, classify } = book;
-  const diensten = []; const meldingen = []; const conclusies = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [], dienstLeeg: [], geenJaar: [] };
+  const diensten = []; const meldingen = []; const conclusies = []; const afbeeldingen = []; const issues = { datum: 0, vaartijdX: 0, herwerkTekst: 0, dubbel: [], dienstLeeg: [], geenJaar: [] };
   const kolMap = new Map(); // alle kolommen vanaf D, ook kolommen die later worden toegevoegd
   const gezien = new Map(); let laatsteJaar = null; let laatsteWeek = null;
   const laagwater = new Set();
@@ -499,7 +586,7 @@ function extract(book) {
         vaartijd: isNum(vt) ? vt : null, herwerk: isNum(hw) ? hw : 0, herwerk_opm: str(hw) && !isNum(hw) && !/^x$/i.test(str(hw)) ? 1 : 0 });
     }
     // Oorzaken en extra opmerkingen
-    let mode = null; let lastMelding = null; let conclBuf = null;
+    let mode = null; let lastMelding = null; let conclBuf = null; let vaRij = null;
     // Begin op de rij waar de tabel stopte: staat de kop 'Oorzaken oranje/rode diensten' direct onder de tabel, dan wordt die zo niet overgeslagen
     for (; r <= sh.maxR; r++) {
       const texts = [1, 2, 3, 4].map((c) => sh.get(r, c).v).map((v, i) => ({ v, s: str(v), c: i + 1 }));
@@ -507,7 +594,7 @@ function extract(book) {
       if (!joined) { if (mode === 'extra') mode = null; continue; }
       if (/oorzaken oranje/i.test(joined)) { mode = 'oorzaak'; continue; }
       if (/^datum\b/i.test(texts[0].s) && /reden/i.test(joined)) continue;
-      if (/mogelijke verbeteractie/i.test(joined)) { mode = null; continue; }
+      if (/mogelijke verbeteractie/i.test(joined)) { mode = null; if (vaRij == null) vaRij = r; continue; }
       const eerste = (texts.find((t) => t.s) || { s: '' }).s;
       if (/^(algemene\s+)?conclusie\b/i.test(eerste)) {
         const after = joined.replace(/^.*?conclusie\s*:?\s*/i, '').trim();
@@ -536,6 +623,8 @@ function extract(book) {
         meldingen.push(lastMelding);
       }
     }
+    // Plaatjes op dit blad (de tabellen met verbeteracties worden later in de browser gelezen)
+    (sh.afb || []).forEach((x) => afbeeldingen.push({ week, rij: x.rij, pad: x.pad, naVerbeteracties: vaRij != null && x.rij >= vaRij - 1 }));
   }
   // Meldingen zonder datum krijgen de eerste dag van hun week
   meldingen.forEach((m) => { if (!m.datum) { const d = diensten.find((x) => x.week === m.week); m.datum = d ? d.datum : ''; } m.melding = m.melding.replace(/\s+/g, ' ').trim(); });
@@ -546,7 +635,7 @@ function extract(book) {
     m.themas = THEMAS.filter((th) => th.woorden.some((w) => (w instanceof RegExp ? w.test(t) : t.includes(w)))).map((th) => th.code);
     m.partijen = PARTIJEN.filter((p) => p.re.test(m.melding)).map((p) => p.naam);
   });
-  return { diensten, meldingen, conclusies, issues, laagwater, kolommen: maakKolommen(kolMap, diensten, issues) };
+  return { diensten, meldingen, conclusies, afbeeldingen, issues, laagwater, kolommen: maakKolommen(kolMap, diensten, issues) };
 }
 
 /* Kolomsoort bepalen en waarden omzetten.
@@ -647,7 +736,9 @@ function render() {
   drawHeat($('c-heat'), meld, weeks, themaCount);
   drawRanking(meld);
   drawMinis(weeks, dien, D.kolommen);
-  drawSamenhang(dien, D.kolommen);
+  drawVergelijk(weeks, dien);
+  drawSamenhang(dien);
+  drawVerbeteracties();
   drawChips(); drawMeldingen();
   drawConclusies(D.conclusies.filter((c) => inRange(c.week)), weeks, dien, meld);
   drawInzichten(D, dien, meld, weeks);
@@ -683,7 +774,7 @@ function drawWeek(el, rows, laag) {
   const stack = d3.stack().keys(BKEYS).value((d, k) => d[keyMap[k]])(rows);
   svg.append('g').selectAll('g').data(stack).join('g').style('fill', (s) => BCOL[s.key]).selectAll('rect').data((s) => s).join('rect')
     .attr('x', (d) => x(d.data.week)).attr('width', x.bandwidth()).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - 1)).attr('rx', 1.5);
-  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => x.step() > 26 || i % 2 === 0)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => i % Math.max(1, Math.ceil(44 / x.step())) === 0)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
   svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6)).call(axisClean).call((g) => g.select('.domain').remove());
   const t = tipFor(el);
   svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
@@ -788,17 +879,25 @@ function kolWaarde(k, rs) {
 const kolFmt = (k) => (k.soort === 'som' ? F.int : (v) => F.dec1(v) + (k.eenheid === 'uur' ? ' u' : ''));
 function drawMinis(weeks, dien, kolommen) {
   const box = $('minis'); box.replaceChildren();
+  // Knoppen om alle grafieken tegelijk lijn of staaf te maken
+  const alle = $('minis-alle'); alle.replaceChildren(seg([['lijn', 'Lijn'], ['staaf', 'Staaf'], ['', 'Standaard']], null, (v) => {
+    VK.type = {}; if (v) kolommen.forEach((k) => { VK.type[k.key] = v; }); vkBewaar(); render();
+  }, 'Grafiektype voor alle grafieken'));
   // Elke kolom uit het Excel krijgt een eigen grafiek, ook kolommen die later zijn toegevoegd
   const defs = kolommen.map((k) => [k.label + (k.soort === 'gem' ? ' (gem. per dienst)' : ''), k]);
   const teken = []; // eerst alle kaarten plaatsen, dan tekenen, zodat de breedte van elke grafiek klopt
   const rowsVan = (k) => weeks.map((w) => ({ week: w, [k.key]: kolWaarde(k, dien.filter((r) => r.week === w)) }));
   defs.forEach(([title, k]) => {
-    const key = k.key; const f = kolFmt(k); const line = k.soort === 'gem'; const rows = rowsVan(k);
+    const key = k.key; const f = kolFmt(k); const rows = rowsVan(k);
+    const type = VK.type[key] || (k.soort === 'gem' ? 'lijn' : 'staaf'); const line = type === 'lijn';
     const card = document.createElement('div'); card.className = 'card';
-    const h = document.createElement('h3'); h.textContent = title; const p = document.createElement('p'); p.className = 'note';
+    const kop = document.createElement('div'); kop.className = 'kaartkop';
+    const h = document.createElement('h3'); h.textContent = title;
+    kop.append(h, seg([['lijn', 'Lijn'], ['staaf', 'Staaf']], type, (v) => { VK.type[key] = v; vkBewaar(); render(); }, 'Grafiektype ' + k.label));
+    const p = document.createElement('p'); p.className = 'note';
     const tot = kolWaarde(k, dien);
-    p.textContent = tot == null ? 'Niet ingevuld in deze periode' : (line ? 'Gemiddeld ' + f(tot) : 'Totaal ' + F.int(tot));
-    const el = document.createElement('div'); el.className = 'chart'; card.append(h, p, el); box.appendChild(card);
+    p.textContent = tot == null ? 'Niet ingevuld in deze periode' : (k.soort === 'gem' ? 'Gemiddeld ' + f(tot) : 'Totaal ' + F.int(tot));
+    const el = document.createElement('div'); el.className = 'chart'; card.append(kop, p, el); box.appendChild(card);
     teken.push(() => {
     if (!rows.length) return;
     const W = Math.max(240, el.clientWidth), H = 112, m = { t: 16, r: 6, b: 20, l: 6 };
@@ -832,34 +931,100 @@ const pearson = (pairs) => {
   return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
 };
 const sterkteWoord = (r) => (r == null ? 'te weinig gegevens' : Math.abs(r) >= 0.5 ? 'sterk' : Math.abs(r) >= 0.3 ? 'matig' : Math.abs(r) >= 0.1 ? 'zwak' : 'geen');
-function drawSamenhang(dien, kolommen) {
-  const isOR = (r) => (r.beleving === 'Oranje' || r.beleving === 'Rood' ? 1 : r.beleving === 'Groen' ? 0 : null);
-  const val = (r, k) => (r.m && k.key in r.m ? r.m[k.key] : null);
-  // Tabel: verband met beleving
+/* ===== Voorkeuren (grafiektype, gekozen meetpunten), per browser onthouden ===== */
+const VOORKEUR_SLEUTEL = 'bison-grafiek-v1';
+const VK = (() => {
+  let v = null; try { v = JSON.parse(localStorage.getItem(VOORKEUR_SLEUTEL)); } catch (e) { v = null; }
+  if (!v || typeof v !== 'object' || Array.isArray(v)) v = {};
+  if (!v.type || typeof v.type !== 'object' || Array.isArray(v.type)) v.type = {};
+  if (!v.vgl || typeof v.vgl !== 'object' || Array.isArray(v.vgl)) v.vgl = {};
+  if (!['lijn', 'staaf'].includes(v.vgl.type)) v.vgl.type = 'lijn';
+  if (!['eigen', 'zelfde'].includes(v.vgl.schaal)) v.vgl.schaal = 'eigen';
+  return v;
+})();
+const vkBewaar = () => { try { localStorage.setItem(VOORKEUR_SLEUTEL, JSON.stringify(VK)); } catch (e) { /* alleen voor deze sessie */ } };
+// Knoppengroep waarin één keuze actief is
+function seg(opties, actief, kies, label) {
+  const g = document.createElement('div'); g.className = 'seg'; g.setAttribute('role', 'group'); g.setAttribute('aria-label', label);
+  opties.forEach(([v, t]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-pressed', String(v === actief)); b.addEventListener('click', () => kies(v)); g.appendChild(b); });
+  return g;
+}
+const kleinLetter = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+
+/* ===== Meetpunten: alles wat per dienst te meten is =====
+   agg 'som': per week opgeteld; 'gem': per week het gemiddelde per dienst; 'pct': ja/nee per dienst, per week het aandeel. */
+function maakMeetpunten(D) {
+  const perDienst = new Map();
+  D.meldingen.forEach((m) => { const k = m.datum + '|' + m.dienst; if (!perDienst.has(k)) perDienst.set(k, []); perDienst.get(k).push(m); });
+  const ms = (r) => perDienst.get(r.datum + '|' + r.dienst) || [];
+  const kleur = (r) => ['Groen', 'Oranje', 'Rood'].includes(r.beleving);
+  return [
+    { key: 'b:or', label: 'Oranje of rood', groep: 'Beleving', agg: 'pct', get: (r) => (kleur(r) ? (r.beleving === 'Groen' ? 0 : 1) : null) },
+    { key: 'b:rood', label: 'Rood', groep: 'Beleving', agg: 'pct', get: (r) => (kleur(r) ? (r.beleving === 'Rood' ? 1 : 0) : null) },
+    { key: 'b:score', label: 'Beleving (0 groen, 1 oranje, 2 rood)', groep: 'Beleving', agg: 'gem', get: (r) => (kleur(r) ? { Groen: 0, Oranje: 1, Rood: 2 }[r.beleving] : null) },
+    { key: 'b:geen', label: 'Geen overdracht ontvangen', groep: 'Beleving', agg: 'pct', get: (r) => (r.beleving === 'Geen overdracht' ? 1 : 0) }
+  ].concat(D.kolommen.map((k) => ({ key: 'k:' + k.key, label: k.label, groep: 'Kolommen uit het Excel', agg: k.soort, eenheid: k.eenheid, get: (r) => (r.m && k.key in r.m ? r.m[k.key] : null) })))
+    .concat([{ key: 'meld:n', label: 'Aantal meldingen', groep: 'Meldingen', agg: 'som', get: (r) => ms(r).length }])
+    .concat(THEMAS.map((t) => ({ key: 't:' + t.code, label: 'Melding over ' + kleinLetter(t.naam), groep: 'Meldingen', agg: 'som', get: (r) => ms(r).filter((m) => m.themas.includes(t.code)).length })))
+    .concat([{ key: 'd:nacht', label: 'Nachtdienst', groep: 'Dienst', agg: 'pct', get: (r) => (r.dienst === 'Nacht' ? 1 : 0) }]);
+}
+const mpVan = (key) => (S.mp || []).find((m) => m.key === key) || null;
+const mpWeek = (mp, rs) => { const vs = rs.map(mp.get).filter((v) => v != null); if (!vs.length) return null; return mp.agg === 'som' ? d3.sum(vs) : d3.mean(vs); };
+const mpFmt = (mp, v) => (v == null ? '–' : mp.agg === 'pct' ? F.pct(v) : mp.agg === 'som' ? (Number.isInteger(v) ? F.int(v) : nl.format(',.1f')(v)) : F.dec1(v) + (mp.eenheid === 'uur' ? ' u' : ''));
+// Gemiddelde per dienst (bij ja/nee-meetpunten is dat een aandeel)
+const mpGemFmt = (mp, v) => (v == null ? '–' : mp.agg === 'pct' ? F.pct(v) : nl.format(',.2f')(v) + (mp.eenheid === 'uur' ? ' u' : ''));
+const mpWeekNaam = (mp) => mp.label + (mp.agg === 'pct' ? ' (% van de diensten)' : mp.agg === 'gem' ? ' (gem. per dienst)' : ' (totaal per week)');
+const paren = (dien, A, B) => dien.map((r) => [A.get(r), B.get(r)]).filter(([a, b]) => a != null && b != null);
+
+// Keuzelijsten vullen met alle meetpunten, gegroepeerd
+function vulMeetpuntKeuzes() {
+  const MP = S.mp; const groepen = [...new Set(MP.map((m) => m.groep))];
+  const vul = (sel, metGeen) => {
+    sel.replaceChildren(); if (metGeen) sel.appendChild(new Option('Geen', ''));
+    groepen.forEach((g) => { const og = document.createElement('optgroup'); og.label = g; MP.filter((m) => m.groep === g).forEach((m) => og.appendChild(new Option(m.label, m.key))); sel.appendChild(og); });
+  };
+  vul($('vgl-a'), false); vul($('vgl-b'), true); vul($('vgl-c'), true); vul($('samen-doel'), false);
+  const V = VK.vgl; const kol = (re) => (MP.find((m) => m.key.startsWith('k:') && re.test(m.key)) || {}).key;
+  if (!mpVan(V.a)) V.a = 'b:or';
+  if (V.b !== '' && !mpVan(V.b)) V.b = kol(/sterkte/) || kol(/vaartijd/) || 'meld:n';
+  if (V.c && !mpVan(V.c)) V.c = '';
+  if (!mpVan(VK.doel)) VK.doel = 'b:or';
+  $('vgl-a').value = V.a; $('vgl-b').value = V.b || ''; $('vgl-c').value = V.c || ''; $('samen-doel').value = VK.doel;
+}
+function kiesPaar(a, b) {
+  VK.vgl.a = a; VK.vgl.b = b; if (VK.vgl.c === a || VK.vgl.c === b) VK.vgl.c = ''; vkBewaar();
+  $('vgl-a').value = a; $('vgl-b').value = b; $('vgl-c').value = VK.vgl.c || '';
+  const sec = $('vergelijken'); if (sec.classList.contains('verborgen')) { sec.classList.remove('verborgen'); }
+  render(); sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+
+/* ===== Samenhang: alles tegen één gekozen meetpunt, en een matrix ===== */
+function drawSamenhang(dien) {
+  const MP = S.mp; const doel = mpVan(VK.doel) || MP[0]; const ja = doel.agg === 'pct';
+  $('samen-ja').textContent = ja ? `Gem. als ${kleinLetter(doel.label)}` : '';
+  $('samen-nee').textContent = ja ? 'Gem. als niet' : '';
   const tb = $('t-samen'); tb.replaceChildren();
-  const rijen = kolommen.map((k) => {
-    const rs = dien.filter((r) => isOR(r) != null && val(r, k) != null);
-    const g = rs.filter((r) => !isOR(r)), o = rs.filter((r) => isOR(r));
-    const pos = rs.filter((r) => val(r, k) > 0), nul = rs.filter((r) => val(r, k) === 0);
-    const pct = (xs) => (xs.length >= 5 ? d3.mean(xs, isOR) : null);
-    return { k, n: rs.length, g: g.length ? d3.mean(g, (r) => val(r, k)) : null, o: o.length ? d3.mean(o, (r) => val(r, k)) : null,
-      pPos: k.soort === 'som' ? pct(pos) : null, nPos: pos.length, pNul: k.soort === 'som' ? pct(nul) : null, r: pearson(rs.map((r) => [val(r, k), isOR(r)])) };
-  }).sort((a, b) => Math.abs(b.r || 0) - Math.abs(a.r || 0));
+  const rijen = MP.filter((m) => m.key !== doel.key).map((m) => {
+    const ps = paren(dien, m, doel); const r = pearson(ps);
+    const een = ps.filter(([, d]) => d === 1), nul = ps.filter(([, d]) => d === 0);
+    return { m, n: ps.length, r, gJa: ja && een.length >= 5 ? d3.mean(een, (p) => p[0]) : null, gNee: ja && nul.length >= 5 ? d3.mean(nul, (p) => p[0]) : null };
+  }).sort((a, b) => Math.abs(b.r || 0) - Math.abs(a.r || 0) || b.n - a.n);
   rijen.forEach((x) => {
     const tr = document.createElement('tr'); const td = (t, c) => { const e = document.createElement('td'); e.textContent = t; if (c) e.className = c; tr.appendChild(e); return e; };
-    const f = (v) => (v == null ? '–' : x.k.soort === 'som' ? nl.format(',.2f')(v) : F.dec1(v));
-    td(x.k.label, 'strong'); td(F.int(x.n), 'num'); td(f(x.g), 'num'); td(f(x.o), 'num');
-    const a = td(x.pPos == null ? '–' : F.pct(x.pPos), 'num'); if (x.pPos != null) a.title = F.int(x.nPos) + ' diensten';
-    td(x.pNul == null ? '–' : F.pct(x.pNul), 'num');
-    td(x.r == null ? 'te weinig gegevens' : sterkteWoord(x.r) + (Math.abs(x.r) >= 0.1 ? (x.r > 0 ? ', vaker oranje/rood' : ', vaker groen') : ''));
+    td(x.m.label, 'strong'); td(F.int(x.n), 'num');
+    td(ja ? mpGemFmt(x.m, x.gJa) : '', 'num'); td(ja ? mpGemFmt(x.m, x.gNee) : '', 'num');
+    td(x.r == null ? '–' : nl.format('.2f')(x.r), 'num');
+    td(x.r == null ? 'te weinig gegevens' : sterkteWoord(x.r) + (Math.abs(x.r) >= 0.1 ? (x.r > 0 ? ', gaan samen omhoog' : ', tegengesteld') : ''));
+    const c = td(''); const b = document.createElement('button'); b.type = 'button'; b.className = 'link-knop'; b.textContent = 'Bekijk'; b.setAttribute('aria-label', 'Bekijk ' + x.m.label + ' tegen ' + doel.label);
+    b.addEventListener('click', () => kiesPaar(doel.key, x.m.key)); c.appendChild(b);
     tb.appendChild(tr);
   });
-  // Matrix: alle kolommen plus beleving tegen elkaar
+  // Matrix: kolommen uit het Excel, beleving en aantal meldingen tegen elkaar
   const el = $('c-corr'); el.replaceChildren();
-  const vars = [{ label: 'Oranje of rood', get: isOR }].concat(kolommen.map((k) => ({ label: k.label, get: (r) => val(r, k) })))
+  const vars = MP.filter((m) => ['b:or', 'b:score', 'meld:n'].includes(m.key) || m.key.startsWith('k:'))
     .filter((v) => dien.filter((r) => v.get(r) != null).length >= 20);
   if (vars.length < 2) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Te weinig gegevens in deze selectie.'; el.appendChild(p); return; }
-  const cells = []; vars.forEach((a, i) => vars.forEach((b, j) => { if (j >= i) return; const pairs = dien.map((r) => [a.get(r), b.get(r)]).filter(([u, w]) => u != null && w != null); cells.push({ i, j, r: pearson(pairs), n: pairs.length }); }));
+  const cells = []; vars.forEach((a, i) => vars.forEach((b, j) => { if (j >= i) return; const ps = paren(dien, a, b); cells.push({ i, j, r: pearson(ps), n: ps.length }); }));
   const box = document.createElement('div'); box.style.overflowX = 'auto'; el.appendChild(box);
   const svg = d3.select(box).append('svg');
   const tmp = svg.append('text').attr('class', 'lbl'); const lw = d3.max(vars, (v) => { tmp.text(v.label); return tmp.node().getComputedTextLength(); }) + 12; tmp.remove();
@@ -868,14 +1033,304 @@ function drawSamenhang(dien, kolommen) {
   svg.attr('width', TW).attr('height', H).attr('viewBox', `0 0 ${TW} ${H}`);
   const t = tipFor(el);
   svg.append('g').selectAll('text').data(vars.slice(1)).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (v, i) => i * cell + cell / 2 + 4).text((v) => v.label);
-  svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (c) => lw + c.j * cell + 1).attr('y', (c) => (c.i - 1) * cell + 1).attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2)
+  svg.append('g').selectAll('rect').data(cells).join('rect').attr('class', 'klik').attr('x', (c) => lw + c.j * cell + 1).attr('y', (c) => (c.i - 1) * cell + 1).attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2)
+    .attr('tabindex', 0).attr('role', 'button').attr('aria-label', (c) => 'Vergelijk ' + vars[c.i].label + ' met ' + vars[c.j].label)
     .style('fill', (c) => (c.r == null ? 'var(--grid)' : c.r >= 0 ? 'var(--accent)' : 'var(--bad)')).style('fill-opacity', (c) => (c.r == null ? 1 : 0.08 + 0.92 * Math.min(1, Math.abs(c.r) / 0.6)))
+    .on('click', (ev, c) => kiesPaar(vars[c.i].key, vars[c.j].key)).on('keydown', (ev, c) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); kiesPaar(vars[c.i].key, vars[c.j].key); } })
     .on('pointermove', (ev, c) => t.show(ev, vars[c.i].label + ' × ' + vars[c.j].label, [[null, 'Correlatie', c.r == null ? '–' : nl.format('.2f')(c.r) + ' (' + sterkteWoord(c.r) + ')'], [null, 'Diensten', F.int(c.n)]])).on('pointerleave', () => t.hide());
   svg.append('g').selectAll('text').data(cells.filter((c) => c.r != null)).join('text').attr('class', 'val').attr('x', (c) => lw + c.j * cell + cell / 2).attr('y', (c) => (c.i - 1) * cell + cell / 2 + 4)
     .attr('text-anchor', 'middle').style('pointer-events', 'none').style('fill', (c) => (Math.abs(c.r) >= 0.35 ? 'var(--bg)' : 'var(--fg)')).text((c) => nl.format('.1f')(c.r));
   svg.append('g').selectAll('text').data(vars.slice(0, -1)).join('text').attr('x', (v, j) => lw + j * cell + cell / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((v, j) => j + 1);
   const leg = document.createElement('p'); leg.className = 'note'; leg.textContent = 'Kolommen onderaan: ' + vars.slice(0, -1).map((v, j) => `${j + 1} ${v.label}`).join(' · '); el.appendChild(leg);
 }
+
+/* ===== Meetpunten vergelijken: over elkaar per week, en per dienst tegen elkaar ===== */
+const SERIE_KLEUR = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
+function gekozenMeetpunten() { const V = VK.vgl; const uit = []; [V.a, V.b, V.c].forEach((k) => { const m = mpVan(k); if (m && !uit.includes(m)) uit.push(m); }); return uit; }
+function verbandZin(dien, A, B) {
+  const ps = paren(dien, A, B); const r = pearson(ps);
+  if (r == null) return `${A.label} en ${kleinLetter(B.label)}: niet te zeggen. Daarvoor zijn minstens 20 diensten nodig waarin beide zijn ingevuld en beide verschillen (nu ${F.int(ps.length)}).`;
+  const kop = `${A.label} en ${kleinLetter(B.label)}: ${sterkteWoord(r) === 'geen' ? 'geen duidelijk' : sterkteWoord(r)} verband (correlatie ${nl.format('.2f')(r)}, ${F.int(ps.length)} diensten).`;
+  const gem = (xs) => (xs.length >= 5 ? d3.mean(xs) : null);
+  if (A.agg === 'pct' || B.agg === 'pct') {
+    const [J, M, omgekeerd] = A.agg === 'pct' ? [A, B, false] : [B, A, true];
+    const ja = gem(ps.filter((p) => p[omgekeerd ? 1 : 0] === 1).map((p) => p[omgekeerd ? 0 : 1])), nee = gem(ps.filter((p) => p[omgekeerd ? 1 : 0] === 0).map((p) => p[omgekeerd ? 0 : 1]));
+    if (ja != null && nee != null) return kop + ` Bij diensten met "${kleinLetter(J.label)}" is ${kleinLetter(M.label)} gemiddeld ${mpGemFmt(M, ja)}, bij de andere diensten ${mpGemFmt(M, nee)}.`;
+    return kop;
+  }
+  if (Math.abs(r) < 0.1) return kop;
+  return kop + ` Hoe hoger ${kleinLetter(A.label)}, hoe ${r > 0 ? 'hoger' : 'lager'} ${kleinLetter(B.label)} meestal is.`;
+}
+function drawVergelijk(weeks, dien) {
+  const V = VK.vgl; const sel = gekozenMeetpunten();
+  $('vgl-opties').replaceChildren(
+    seg([['lijn', 'Lijn'], ['staaf', 'Staaf']], V.type, (v) => { V.type = v; vkBewaar(); render(); }, 'Grafiektype'),
+    seg([['eigen', 'Ieder een eigen schaal'], ['zelfde', 'Zelfde schaal']], V.schaal, (v) => { V.schaal = v; vkBewaar(); render(); }, 'Schaal'));
+  const tekst = $('vgl-tekst'); tekst.replaceChildren();
+  for (let i = 0; i < sel.length; i++) for (let j = i + 1; j < sel.length; j++) { const p = document.createElement('p'); p.textContent = verbandZin(dien, sel[i], sel[j]); tekst.appendChild(p); }
+  if (sel.length < 2) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Kies een tweede meetpunt om te zien of ze samenhangen.'; tekst.appendChild(p); }
+  $('vgl-print').textContent = `Overdracht Bison · week ${wl(S.van)} t/m ${wl(S.tot)} · ${S.dienst ? S.dienst.toLowerCase() + 'diensten' : 'dag- en nachtdiensten'} · meetpunten: ${sel.map((m) => m.label).join(', ')}`;
+  // Reeksen per week
+  const eigen = V.schaal === 'eigen';
+  const reeksen = sel.map((mp, i) => {
+    const vals = weeks.map((w) => ({ week: w, v: mpWeek(mp, dien.filter((r) => r.week === w)) }));
+    const max = d3.max(vals, (d) => Math.abs(d.v || 0)) || 0;
+    return { mp, kleur: SERIE_KLEUR[i], vals: vals.map((d) => ({ ...d, y: d.v == null ? null : eigen ? (max ? d.v / max : 0) : d.v })) };
+  });
+  const leg = $('vgl-legend'); leg.replaceChildren();
+  reeksen.forEach((s) => { const li = document.createElement('li'); const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.kleur; li.append(sw, mpWeekNaam(s.mp)); leg.appendChild(li); });
+  const verschilt = new Set(sel.map((m) => m.agg + (m.eenheid || ''))).size > 1;
+  $('vgl-noot').textContent = eigen ? 'Elk meetpunt op zijn eigen schaal: 100% is de hoogste week van dat meetpunt. Zo zie je of ze samen stijgen en dalen. De echte waarden staan bij de muis en in de tabel.'
+    : 'Alle meetpunten op dezelfde schaal.' + (verschilt ? ' Let op: de meetpunten hebben verschillende eenheden (aandeel, gemiddelde, totaal), dus kies liever "Ieder een eigen schaal".' : '');
+  tekenVglWeek($('c-vgl-week'), reeksen, weeks, eigen, V.type);
+  tekenVglDienst($('c-vgl-dienst'), dien, sel[0], sel[1]);
+  // Tabel per week
+  const tab = $('t-vgl'); tab.replaceChildren();
+  const thead = document.createElement('thead'); const hr = document.createElement('tr');
+  ['Week', ...sel.map(mpWeekNaam)].forEach((t, i) => { const th = document.createElement('th'); th.textContent = t; if (i) th.className = 'num'; hr.appendChild(th); }); thead.appendChild(hr);
+  const tbody = document.createElement('tbody');
+  weeks.forEach((w, wi) => { const tr = document.createElement('tr'); const td0 = document.createElement('td'); td0.textContent = 'Week ' + wl(w); td0.style.whiteSpace = 'nowrap'; tr.appendChild(td0);
+    reeksen.forEach((s) => { const td = document.createElement('td'); td.className = 'num'; td.textContent = mpFmt(s.mp, s.vals[wi].v); tr.appendChild(td); }); tbody.appendChild(tr); });
+  tab.append(thead, tbody);
+}
+function tekenVglWeek(el, reeksen, weeks, eigen, type) {
+  el.replaceChildren();
+  if (!reeksen.length || !weeks.length) { el.textContent = 'Kies een meetpunt.'; return; }
+  const W = Math.max(300, el.clientWidth), H = 280, m = { t: 12, r: 12, b: 28, l: 44 };
+  const x = d3.scaleBand(weeks, [m.l, W - m.r]).padding(type === 'staaf' ? 0.18 : 0.3);
+  const ys = reeksen.flatMap((s) => s.vals.map((d) => d.y)).filter((v) => v != null);
+  const y = d3.scaleLinear([Math.min(0, d3.min(ys) || 0), eigen ? 1 : (d3.max(ys) || 1)], [H - m.b, m.t]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Meetpunten per week: ' + reeksen.map((s) => s.mp.label).join(', '));
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  const yFmt = eigen ? nl.format('.0%') : (reeksen.every((s) => s.mp.agg === 'pct') ? nl.format('.0%') : nl.format(',~g'));
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6).tickFormat(yFmt)).call(axisClean).call((g) => g.select('.domain').remove());
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => i % Math.max(1, Math.ceil(44 / x.step())) === 0)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
+  if (type === 'staaf') {
+    const x1 = d3.scaleBand(reeksen.map((s, i) => i), [0, x.bandwidth()]).padding(0.08);
+    reeksen.forEach((s, i) => svg.append('g').selectAll('rect').data(s.vals.filter((d) => d.y != null)).join('rect')
+      .attr('x', (d) => x(d.week) + x1(i)).attr('width', Math.max(1, x1.bandwidth())).attr('y', (d) => Math.min(y(d.y), y(0))).attr('height', (d) => Math.max(1, Math.abs(y(0) - y(d.y)))).attr('rx', 1.5).style('fill', s.kleur));
+  } else {
+    reeksen.forEach((s) => {
+      svg.append('path').datum(s.vals).attr('d', d3.line().defined((d) => d.y != null).x((d) => x(d.week) + x.bandwidth() / 2).y((d) => y(d.y))).style('fill', 'none').style('stroke', s.kleur).style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
+      svg.append('g').selectAll('circle').data(s.vals.filter((d) => d.y != null)).join('circle').attr('cx', (d) => x(d.week) + x.bandwidth() / 2).attr('cy', (d) => y(d.y)).attr('r', 3.5).style('fill', s.kleur).style('stroke', 'var(--panel)').style('stroke-width', 1.5);
+    });
+  }
+  const t = tipFor(el); const hl = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--axis)').style('pointer-events', 'none').attr('visibility', 'hidden');
+  svg.append('g').selectAll('rect').data(weeks).join('rect').attr('x', (w) => x(w) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
+    .on('pointermove', (ev, w) => { const i = weeks.indexOf(w); hl.attr('x1', x(w) + x.bandwidth() / 2).attr('x2', x(w) + x.bandwidth() / 2).attr('visibility', 'visible');
+      t.show(ev, 'Week ' + wl(w), reeksen.map((s) => [s.kleur, s.mp.label, mpFmt(s.mp, s.vals[i].v)])); })
+    .on('pointerleave', () => { t.hide(); hl.attr('visibility', 'hidden'); });
+}
+function tekenVglDienst(el, dien, A, B) {
+  el.replaceChildren(); $('vgl-dienst-titel').textContent = A && B ? `Per dienst: ${A.label} tegen ${kleinLetter(B.label)}` : 'Per dienst';
+  if (!A || !B) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Kies een tweede meetpunt om de diensten tegen elkaar te zetten.'; el.appendChild(p); return; }
+  const pts = dien.map((r) => ({ r, x: A.get(r), y: B.get(r) })).filter((p) => p.x != null && p.y != null);
+  if (!pts.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Geen diensten waarin beide meetpunten zijn ingevuld.'; el.appendChild(p); return; }
+  const discreet = (vs) => vs.every(Number.isInteger) && new Set(vs).size <= 15;
+  const dx = discreet(pts.map((p) => p.x)), dy = discreet(pts.map((p) => p.y));
+  const rnd = (i, s) => { const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v) - 0.5; };
+  const W = Math.max(280, el.clientWidth), H = 280, m = { t: 22, r: 12, b: 34, l: 44 };
+  const ext = (vs, d) => { let [a, b] = d3.extent(vs); if (a === b) { a -= 1; b += 1; } return d ? [a - 0.5, b + 0.5] : [a - (b - a) * 0.04, b + (b - a) * 0.04]; };
+  const x = d3.scaleLinear(ext(pts.map((p) => p.x), dx), [m.l, W - m.r]); const y = d3.scaleLinear(ext(pts.map((p) => p.y), dy), [H - m.b, m.t]);
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', `${A.label} tegen ${B.label}, ${pts.length} diensten`);
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  const tf = (mp, d) => (mp.agg === 'pct' ? (v) => (v === 0 ? 'nee' : v === 1 ? 'ja' : '') : d ? (v) => (Number.isInteger(v) ? nl.format(',')(v) : '') : nl.format(',~g'));
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(A.agg === 'pct' ? 2 : 5).tickSize(0).tickPadding(8).tickFormat(tf(A, dx))).call(axisClean);
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(B.agg === 'pct' ? 2 : 4).tickSize(0).tickPadding(6).tickFormat(tf(B, dy))).call(axisClean).call((g) => g.select('.domain').remove());
+  svg.append('text').attr('x', W - m.r).attr('y', H - 2).attr('text-anchor', 'end').text(A.label + ' →');
+  svg.append('text').attr('x', m.l).attr('y', 10).text('↑ ' + B.label);
+  const kleur = (r) => BCOL[r.beleving] || 'var(--axis)';
+  const t = tipFor(el); const df = d3.utcFormat('%d-%m-%Y');
+  svg.append('g').selectAll('circle').data(pts).join('circle')
+    .attr('cx', (p, i) => x(p.x + (dx ? rnd(i, 1) * 0.5 : 0))).attr('cy', (p, i) => y(p.y + (dy ? rnd(i, 2) * 0.5 : 0))).attr('r', 4)
+    .style('fill', (p) => kleur(p.r)).style('fill-opacity', 0.8).style('stroke', 'var(--panel)').style('stroke-width', 1)
+    .on('pointermove', (ev, p) => t.show(ev, df(new Date(p.r.datum)) + ' ' + p.r.dienst.toLowerCase(), [[kleur(p.r), 'Beleving', p.r.beleving], [null, A.label, mpFmt(A, p.x)], [null, B.label, mpFmt(B, p.y)]])).on('pointerleave', () => t.hide());
+  // Lijn van het verband (kleinste kwadraten)
+  const mx = d3.mean(pts, (p) => p.x), my = d3.mean(pts, (p) => p.y); const sxx = d3.sum(pts, (p) => (p.x - mx) ** 2);
+  if (sxx > 0 && pts.length >= 20) {
+    const b = d3.sum(pts, (p) => (p.x - mx) * (p.y - my)) / sxx; const [x0, x1] = x.domain();
+    svg.append('line').attr('x1', x(x0)).attr('x2', x(x1)).attr('y1', y(my + b * (x0 - mx))).attr('y2', y(my + b * (x1 - mx))).style('stroke', 'var(--fg)').style('stroke-width', 2).style('stroke-dasharray', '6 4').style('pointer-events', 'none');
+  }
+}
+
+/* ===== Exporteren: CSV (voor Excel) en PDF (via afdrukken) ===== */
+function csvDownload(naam, kop, rijen) {
+  const esc = (v) => { if (v == null) return ''; if (typeof v === 'number') return String(Math.round(v * 1000) / 1000).replace('.', ','); const s = String(v); return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const txt = '﻿' + [kop, ...rijen].map((r) => r.map(esc).join(';')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' })); a.download = naam;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+const periodeNaam = () => `wk${wl(S.van)}-wk${wl(S.tot)}`.replace(/[^0-9a-z-]+/gi, '') + (S.dienst ? '-' + S.dienst.toLowerCase() : '');
+function huidigeSelectie() {
+  const D = S.data; const weeks = d3.range(S.van, S.tot + 1).filter((w) => D.diensten.some((r) => r.week === w));
+  const dien = D.diensten.filter((r) => r.week >= S.van && r.week <= S.tot && (!S.dienst || r.dienst === S.dienst));
+  return { weeks, dien };
+}
+$('vgl-csv-week').addEventListener('click', () => {
+  if (!S.data) return; const { weeks, dien } = huidigeSelectie(); const sel = gekozenMeetpunten();
+  const waarde = (mp, v) => (v == null ? null : mp.agg === 'pct' ? Math.round(v * 1000) / 10 : v);
+  csvDownload(`bison-meetpunten-per-week-${periodeNaam()}.csv`, ['Week', ...sel.map((m) => mpWeekNaam(m).replace('(% van de diensten)', '(%)'))],
+    weeks.map((w) => [wl(w), ...sel.map((m) => waarde(m, mpWeek(m, dien.filter((r) => r.week === w))))]));
+});
+$('vgl-csv-dienst').addEventListener('click', () => {
+  if (!S.data) return; const { dien } = huidigeSelectie(); const df = d3.utcFormat('%d-%m-%Y');
+  const rs = dien.slice().sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : a.dienst === 'Dag' ? -1 : 1));
+  csvDownload(`bison-meetpunten-per-dienst-${periodeNaam()}.csv`, ['Datum', 'Dienst', 'Week', 'Beleving', ...S.mp.map((m) => m.label + (m.agg === 'pct' ? ' (1 = ja)' : ''))],
+    rs.map((r) => [df(new Date(r.datum)), r.dienst, wl(r.week), r.beleving, ...S.mp.map((m) => m.get(r))]));
+});
+$('vgl-pdf').addEventListener('click', () => {
+  if (!S.data) return; const box = $('vgl-tabel-box'); const wasOpen = box.open; box.open = true;
+  const titel = document.title; document.title = `Bison meetpunten ${periodeNaam()}`;
+  document.body.classList.add('print-vgl');
+  const klaar = () => { document.body.classList.remove('print-vgl'); document.title = titel; box.open = wasOpen; removeEventListener('afterprint', klaar); };
+  addEventListener('afterprint', klaar); window.print();
+});
+['vgl-a', 'vgl-b', 'vgl-c'].forEach((id) => $(id).addEventListener('change', (e) => { VK.vgl[id.slice(-1)] = e.target.value; vkBewaar(); render(); }));
+$('samen-doel').addEventListener('change', (e) => { VK.doel = e.target.value; vkBewaar(); render(); });
+
+/* ===== Verbeteracties uit de plaatjes lezen (tekstherkenning in de browser, niets wordt verstuurd) ===== */
+const OCR_SLEUTEL = 'bison-ocr-v1';
+const OCR_LIB = 'lib/tesseract/';
+const VA = { status: 'leeg', items: [], gelezen: 0, totaal: 0, fout: '', run: 0 };
+// Zet de gelezen woorden van een plaatje om in een tabel: kolommen zijn verticale stroken zonder tekst, rijen zijn blokken regels met witruimte ertussen.
+function maakTabel(words, W, lijnenY) {
+  const ws = words.filter((w) => w.text && w.text.trim() && !/^[_\-—–|.,:;'"‘’`~=+*°»«]+$/.test(w.text.trim()) && w.confidence > 30)
+    .map((w) => ({ t: w.text.trim(), c: w.confidence, x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1 }));
+  if (ws.length < 4) return null;
+  const bezet = new Uint8Array(Math.ceil(W) + 2); ws.forEach((w) => { for (let x = Math.max(0, Math.floor(w.x0)); x <= Math.min(W, Math.ceil(w.x1)); x++) bezet[x] = 1; });
+  const minGat = Math.max(14, W * 0.018); const grenzen = []; let start = null;
+  const links = d3.min(ws, (w) => w.x0), rechts = d3.max(ws, (w) => w.x1);
+  for (let x = Math.ceil(links); x <= rechts; x++) { if (!bezet[x]) { if (start == null) start = x; } else if (start != null) { if (x - start >= minGat) grenzen.push((start + x) / 2); start = null; } }
+  ws.sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1));
+  const regels = [];
+  ws.forEach((w) => { const g = regels.find((r) => Math.min(r.y1, w.y1) - Math.max(r.y0, w.y0) > 0.5 * Math.min(r.y1 - r.y0, w.y1 - w.y0)); if (g) { g.ws.push(w); g.y0 = Math.min(g.y0, w.y0); g.y1 = Math.max(g.y1, w.y1); } else regels.push({ y0: w.y0, y1: w.y1, ws: [w] }); });
+  regels.sort((a, b) => a.y0 - b.y0);
+  const h = d3.median(regels, (r) => r.y1 - r.y0) || 10;
+  // Rijen: bij voorkeur op de lichte scheidingslijnen in het plaatje, anders op de witruimte tussen de regels
+  const boven = regels[0].y0, onder = regels[regels.length - 1].y1;
+  const lijnen = (lijnenY || []).filter((y) => y > boven && y < onder);
+  const blokken = [];
+  if (lijnen.length) {
+    const vakVan = (g) => lijnen.filter((y) => y < (g.y0 + g.y1) / 2).length;
+    regels.forEach((g) => { const v = vakVan(g); (blokken[v] = blokken[v] || []).push(g); });
+    for (let i = blokken.length - 1; i >= 0; i--) if (!blokken[i]) blokken.splice(i, 1);
+  } else {
+    let vorige = null;
+    regels.forEach((g) => { if (!vorige || g.y0 - vorige.y1 > 0.75 * h) blokken.push([]); blokken[blokken.length - 1].push(g); vorige = g; });
+  }
+  // Staat de kop in hetzelfde blok als de eerste rij, maak dan van de eerste regel een eigen blok
+  const KOPWOORD = /knelpunt|verbeter|oorzaak|probleem|thema|onderwerp|actie|oplossing/i;
+  if (blokken[0] && blokken[0].length > 1 && blokken[0][0].ws.some((w) => KOPWOORD.test(w.t)) && blokken[0][0].ws.length <= 8) blokken.splice(0, 1, [blokken[0][0]], blokken[0].slice(1));
+  const kolVan = (x) => grenzen.filter((g) => g < x).length;
+  let rijen = blokken.map((rs) => { const cellen = Array.from({ length: grenzen.length + 1 }, () => []);
+    rs.forEach((g) => g.ws.sort((a, b) => a.x0 - b.x0).forEach((w) => cellen[kolVan((w.x0 + w.x1) / 2)].push(w.t)));
+    return cellen.map((c) => c.join(' ').replace(/\s+/g, ' ').trim()); });
+  // Een blok zonder tekst in de eerste kolom hoort bij de rij erboven
+  rijen = rijen.reduce((acc, r) => { if (acc.length && !r[0] && grenzen.length) { const v = acc[acc.length - 1]; r.forEach((c, i) => { if (c) v[i] = (v[i] + ' ' + c).trim(); }); } else acc.push(r); return acc; }, []);
+  // Kop herkennen
+  let kop = null;
+  if (rijen.length && rijen[0].some((c) => KOPWOORD.test(c)) && rijen[0].every((c) => c.split(' ').length <= 4)) kop = rijen.shift();
+  // Is het een tabel met tekst? (en geen grafiek)
+  const woorden = (c) => c.split(' ').filter((x) => /[a-zà-ÿ]{2,}/i.test(x)).length;
+  const goed = rijen.filter((r) => r.filter((c) => woorden(c) >= 2).length >= 2);
+  const isTabel = grenzen.length >= 1 && grenzen.length <= 3 && !rijen.some((r) => r.some((c) => /oorzaken oranje/i.test(c))) && d3.mean(ws, (w) => w.c) >= 70
+    && (goed.length >= 1 && goed.length >= 0.6 * rijen.length);
+  return { kop, rijen: isTabel ? rijen : [], kopAlleen: !!kop && !rijen.length && grenzen.length >= 1 };
+}
+// Lichtgrijze horizontale lijnen over (bijna) de hele breedte: de scheiding tussen tabelrijen
+function scheidingslijnen(bmp) {
+  try {
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data; const uit = [];
+    for (let y = 0; y < c.height; y++) {
+      let n = 0;
+      for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; const r = d[i], g = d[i + 1], b = d[i + 2]; const l = (r + g + b) / 3;
+        if (l >= 150 && l <= 248 && Math.abs(r - g) < 14 && Math.abs(g - b) < 14) n++; }
+      if (n >= 0.45 * c.width) { if (uit.length && y - uit[uit.length - 1].y1 <= 2) uit[uit.length - 1].y1 = y; else uit.push({ y0: y, y1: y }); }
+    }
+    return uit.map((u) => (u.y0 + u.y1) / 2);
+  } catch (e) { return []; }
+}
+const hashBytes = (b) => { let h = 2166136261; for (let i = 0; i < b.length; i += 7) { h ^= b[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '-' + b.length; };
+function laadScript(src) { return new Promise((ok, nee) => { if (window.Tesseract) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => nee(new Error('Kon ' + src + ' niet laden')); document.head.appendChild(s); }); }
+async function leesVerbeteracties(D, book) {
+  const run = ++VA.run; const lijst = D.afbeeldingen.slice().sort((a, b) => a.week - b.week || a.rij - b.rij);
+  Object.assign(VA, { status: 'leeg', items: [], gelezen: 0, totaal: lijst.length, fout: '' });
+  if (!lijst.length) { VA.status = 'geen'; drawVerbeteracties(); return; }
+  let cache = {}; try { cache = JSON.parse(localStorage.getItem(OCR_SLEUTEL)) || {}; if (typeof cache !== 'object' || Array.isArray(cache)) cache = {}; } catch (e) { cache = {}; }
+  const resultaten = []; const teLezen = [];
+  for (const a of lijst) { const bytes = await book.bestand(a.pad); if (!bytes) continue; const h = hashBytes(bytes); if (cache[h]) resultaten.push({ a, t: cache[h] }); else teLezen.push({ a, bytes, h }); }
+  VA.gelezen = resultaten.length;
+  if (teLezen.length) {
+    if (!location.protocol.startsWith('http')) { VA.status = 'lokaal'; } else {
+      VA.status = 'bezig'; drawVerbeteracties();
+      let worker = null;
+      try {
+        await laadScript(OCR_LIB + 'tesseract.min.js');
+        worker = await Tesseract.createWorker('nld', 1, { workerPath: new URL(OCR_LIB + 'worker.min.js', location.href).href, corePath: new URL(OCR_LIB + 'core', location.href).href, langPath: new URL(OCR_LIB + 'lang', location.href).href });
+        for (const x of teLezen) {
+          if (run !== VA.run) break;
+          const type = /\.jpe?g$/i.test(x.a.pad) ? 'image/jpeg' : 'image/png'; const blob = new Blob([x.bytes], { type });
+          const bmp = await createImageBitmap(blob); const W = bmp.width; const lijnenY = scheidingslijnen(bmp); bmp.close && bmp.close();
+          const res = await worker.recognize(blob, {}, { text: true, blocks: true });
+          const t = maakTabel(res.data.words || [], W, lijnenY) || { kop: null, rijen: [], kopAlleen: false };
+          cache[x.h] = t; resultaten.push({ a: x.a, t }); VA.gelezen++;
+          if (VA.gelezen % 3 === 0) drawVerbeteracties();
+        }
+      } catch (e) { console.error(e); VA.fout = e.message || String(e); }
+      if (worker) worker.terminate();
+      try { localStorage.setItem(OCR_SLEUTEL, JSON.stringify(cache)); } catch (e) { /* geen opslag: de volgende keer opnieuw lezen */ }
+      if (run !== VA.run) return;
+      VA.status = VA.fout ? 'fout' : 'klaar';
+    }
+  } else VA.status = 'klaar';
+  // Tabellen omzetten naar verbeteracties; een losse kop geldt voor het plaatje eronder op hetzelfde blad
+  resultaten.sort((p, q) => p.a.week - q.a.week || p.a.rij - q.a.rij);
+  const items = []; const gezien = new Set(); let losseKop = null;
+  resultaten.forEach(({ a, t }) => {
+    if (t.kopAlleen) { losseKop = { week: a.week, kop: t.kop }; return; }
+    if (!t.rijen.length) return;
+    const n = t.rijen[0].length; const kop = t.kop || (losseKop && losseKop.week === a.week && losseKop.kop.length === n ? losseKop.kop : null); losseKop = null;
+    const zoek = (re) => (kop ? kop.findIndex((c) => re.test(c)) : -1);
+    let iV = zoek(/verbeter|actie|oplossing/i); if (iV < 0) iV = n - 1;
+    let iK = zoek(/knelpunt|probleem/i); if (iK < 0) iK = iV === 0 ? 1 : 0;
+    const iO = zoek(/oorzaak/i); const iT = zoek(/thema|onderwerp/i);
+    t.rijen.forEach((r) => {
+      const it = { week: a.week, knelpunt: r[iK] || '', voorstel: r[iV] || '', oorzaak: iO >= 0 && iO !== iK && iO !== iV ? r[iO] || '' : '', onderwerp: iT >= 0 && iT !== iK && iT !== iV ? r[iT] || '' : '' };
+      if (!it.knelpunt && !it.voorstel) return;
+      const sl = it.week + '|' + it.knelpunt + '|' + it.voorstel; if (gezien.has(sl)) return; gezien.add(sl);
+      const tekst = ' ' + [it.onderwerp, it.knelpunt, it.oorzaak].join(' ').toLowerCase() + ' ';
+      it.themas = THEMAS.filter((th) => th.woorden.some((w) => (w instanceof RegExp ? w.test(tekst) : tekst.includes(w)))).map((th) => th.code);
+      items.push(it);
+    });
+  });
+  VA.items = items; VA.plaatjes = resultaten.filter((x) => x.t.rijen.length).length;
+  drawVerbeteracties();
+}
+function drawVerbeteracties() {
+  const st = $('va-status'); const tb = $('t-va'); if (!st || !tb) return;
+  const msg = { leeg: 'Laad het Excel om de verbeteracties te lezen.', geen: 'In dit bestand staan geen plaatjes.',
+    lokaal: 'Het lezen van plaatjes werkt alleen in de websiteversie van het dashboard (via GitHub Pages), niet als je index.html als los bestand opent.',
+    bezig: `Plaatjes worden gelezen in je browser: ${F.int(VA.gelezen)} van ${F.int(VA.totaal)}. De eerste keer duurt dit even; daarna onthoudt deze browser het.`,
+    klaar: `${F.int(VA.items.length)} verbeteracties gelezen uit ${F.int(VA.plaatjes || 0)} plaatjes.`,
+    fout: 'Het lezen van de plaatjes is niet gelukt: ' + VA.fout };
+  st.textContent = msg[VA.status] || '';
+  const q = ($('va-zoek').value || '').trim().toLowerCase();
+  const rows = VA.items.filter((x) => (S.van == null || (x.week >= S.van && x.week <= S.tot)) && (!q || [x.knelpunt, x.voorstel, x.oorzaak, x.onderwerp, x.themas.map(thNaam).join(' ')].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => b.week - a.week);
+  $('n-va').textContent = F.int(rows.length); tb.replaceChildren();
+  rows.forEach((x) => {
+    const tr = document.createElement('tr'); const td = (t, c) => { const e = document.createElement('td'); if (c) e.className = c; if (t != null) e.textContent = t; tr.appendChild(e); return e; };
+    td('Week ' + wl(x.week)).style.whiteSpace = 'nowrap';
+    const k = td(null, 'wrapc'); if (x.onderwerp) { const b = document.createElement('b'); b.textContent = x.onderwerp + ': '; k.appendChild(b); } k.append(x.knelpunt);
+    if (x.oorzaak) { const o = document.createElement('div'); o.className = 'muted small'; o.textContent = 'Mogelijke oorzaak: ' + x.oorzaak; k.appendChild(o); }
+    td(x.voorstel, 'wrapc');
+    const c = td(null); (x.themas.length ? x.themas.map(thNaam) : ['Overig']).forEach((n) => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = n; c.appendChild(s); });
+    tb.appendChild(tr);
+  });
+}
+$('va-zoek').addEventListener('input', drawVerbeteracties);
 
 function pickThema(code, scroll) {
   S.thema = S.thema === code ? null : code; render();
@@ -1080,9 +1535,9 @@ function setStatus(t, err) { const s = $('status'); s.textContent = t; s.classLi
 async function load(buf, naam) {
   try {
     setStatus('Bezig met inlezen…');
-    const data = extract(await XLSX_READER.read(buf));
+    const book = await XLSX_READER.read(buf); const data = extract(book);
     if (!data.diensten.length) throw new Error('Geen weekbladen gevonden. Klopt het dat de bladen "Week NN 2026" heten?');
-    S.data = data;
+    S.data = data; S.mp = maakMeetpunten(data); vulMeetpuntKeuzes();
     const weeks = [...new Set(data.diensten.map((r) => r.week))].sort((a, b) => a - b);
     MEERJAREN = new Set(weeks.map((w) => Math.floor(w / 100))).size > 1;
     S.van = weeks[0]; S.tot = weeks[weeks.length - 1]; S.thema = null;
@@ -1091,6 +1546,7 @@ async function load(buf, naam) {
     $('filters').hidden = false; $('dash').hidden = false;
     setStatus(`${naam}: ${F.int(data.diensten.length)} diensten en ${F.int(data.meldingen.length)} meldingen ingelezen, week ${wl(S.van)} t/m ${wl(S.tot)}.`);
     render();
+    leesVerbeteracties(data, book).catch((e) => { console.error(e); VA.status = 'fout'; VA.fout = e.message; drawVerbeteracties(); });
   } catch (e) { console.error(e); setStatus('Het bestand kon niet worden ingelezen: ' + e.message, true); }
 }
 $('pick').addEventListener('click', () => $('file').click());

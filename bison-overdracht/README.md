@@ -8,6 +8,9 @@ Dashboard voor de wekelijkse rapportage overdracht van de havendienst Bison (ket
 2. Klik op **Excel kiezen** (of sleep het bestand op de pagina) en kies de nieuwste `Rapportage overdracht Bison.xlsx`.
 3. Het dashboard vult zich met alle weekbladen. Met de filters bovenaan kies je een periode of alleen dag- of nachtdienst.
 4. Met **Indeling aanpassen** zet je onderdelen hoger of lager of verberg je ze. Die keuze wordt per browser onthouden.
+5. Bij **Meetpunten vergelijken** kies je zelf twee of drie meetpunten: elke kolom uit het Excel, de beleving, het aantal meldingen of een thema uit de meldingen. Je ziet ze per week over elkaar (lijn of staaf, eigen of zelfde schaal) en per dienst tegen elkaar, met een zin over het verband. Met **CSV** download je de cijfers voor Excel, met **PDF** druk je de vergelijking af of sla je hem op als PDF.
+6. Bij **Samenhang** vergelijk je alles met één meetpunt naar keuze. Klik op een vak in de matrix of op **Bekijk** om dat paar te vergelijken.
+7. Bij elke grafiek onder **Registraties per week** kies je zelf lijn of staaf.
 
 Het Excel wordt alleen in je eigen browser gelezen. Er wordt niets geüpload of opgeslagen, ook niet op GitHub.
 
@@ -24,7 +27,7 @@ Het Excel wordt alleen in je eigen browser gelezen. Er wordt niets geüpload of 
 - Een tekst met `Conclusie` komt in het overzicht "Conclusies per week".
 - Staat er `Laagwaterperiode` boven de tabel, dan telt die week als laagwaterperiode.
 
-De verbetervoorstellen staan in het Excel als plaatjes en kunnen niet automatisch worden gelezen. De samengevoegde lijst met oplossingen staat daarom in `index.html` (zoek op `OPLOSSINGEN`). Ook de thema's en trefwoorden (`THEMAS`) en de partijen (`PARTIJEN`) zijn daar aan te passen.
+De tabellen met verbeteracties staan in het Excel als plaatjes. Het dashboard leest die plaatjes in de browser met tekstherkenning en toont ze bij **Verbeteracties uit de weekbladen**. Dat werkt alleen via de website (GitHub Pages), niet als je `index.html` als los bestand opent. De eerste keer duurt het ongeveer een halve minuut; daarna onthoudt de browser het. Een enkel woord kan verkeerd gelezen zijn. De samengevoegde lijst "Beste oplossingen" staat apart in `index.html` (zoek op `OPLOSSINGEN`). Ook de thema's en trefwoorden (`THEMAS`) en de partijen (`PARTIJEN`) zijn daar aan te passen.
 
 ## Let op
 
@@ -32,4 +35,4 @@ Deze repo is openbaar. Zet het Excel er niet in, want dan kan iedereen de meldin
 
 ## Techniek
 
-Eén HTML-pagina zonder server. `lib/` bevat [d3](https://d3js.org) en [JSZip](https://stuk.github.io/jszip/) met hun licenties.
+Eén HTML-pagina zonder server. `lib/` bevat [d3](https://d3js.org) en [JSZip](https://stuk.github.io/jszip/) met hun licenties, en in `lib/tesseract/` [Tesseract.js](https://github.com/naptha/tesseract.js) 5.1.1 (tekstherkenning, Apache 2.0) met de Nederlandse taaldata uit `@tesseract.js-data/nld` (tessdata `best_int`, Apache 2.0). Alles draait in de browser; er wordt niets naar een server gestuurd.
