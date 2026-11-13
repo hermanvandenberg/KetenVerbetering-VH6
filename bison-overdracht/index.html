@@ -140,10 +140,40 @@ ul.list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 footer { color: var(--muted); font-size: .8rem; }
 /* Meetpunten vergelijken, grafiekkeuze, verbeteracties */
-:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; } }
-:root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; flex: none; }
+:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; } }
+:root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.tab { font: inherit; font-size: .9rem; padding: 5px 12px; border-radius: var(--r); border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+.tab-plus { color: var(--accent); border-style: dashed; }
+.mpchips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mpchip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: .85rem; max-width: 100%; }
+.mpchip button { font: inherit; border: 0; background: transparent; color: var(--muted); cursor: pointer; width: 1.6rem; height: 1.6rem; border-radius: 999px; }
+.legknop { font: inherit; display: inline-flex; gap: 6px; align-items: center; background: none; border: 0; padding: 2px 4px; border-radius: 4px; color: inherit; cursor: pointer; }
+.legknop[aria-pressed="true"] { background: var(--accent-soft); color: var(--fg); }
+.mpchip button:hover { background: var(--grid); color: var(--fg); }
+#vgl-naam { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; min-width: 0; width: 18rem; max-width: 100%; }
+.btn-licht:disabled { opacity: .45; cursor: default; }
+.klik-tegel { cursor: pointer; transition: border-color .15s; }
+.klik-tegel:hover, .klik-tegel:focus-visible { border-color: var(--accent); }
+.klikrij { cursor: pointer; }
+.klikrij:hover td, .klikrij:focus-visible td { background: var(--accent-soft); }
+dialog#detail { width: min(54rem, calc(100vw - 24px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg); box-shadow: 0 18px 50px rgba(0,0,0,.3); }
+dialog#detail::backdrop { background: rgba(10, 20, 30, .45); }
+.detail-kop { display: flex; gap: 10px; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+.detail-kop h2 { flex: 1 1 auto; font-size: 1.3rem; min-width: 0; }
+#detail-body { padding: 16px 18px 20px; display: grid; gap: 10px; overflow: auto; max-height: calc(100vh - 110px); }
+#detail-body h4 { margin: 8px 0 0; font-size: .95rem; }
+#detail-body p { margin: 0; max-width: 80ch; }
+.detail-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 8px; }
+.detail-tiles .tile { padding: 10px 12px; } .detail-tiles .val { font-size: 1.5rem; }
+.detail-meld { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.detail-meld li { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; display: grid; gap: 3px; }
+.detail-nav { margin-top: 6px; }
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; flex: 0 1 auto; }
+#vgl-toevoegen { max-width: 100%; min-width: 0; }
+#vgl-opties { max-width: 100%; min-width: 0; }
 .seg button { font: inherit; font-size: .8rem; padding: 4px 10px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
@@ -162,7 +192,7 @@ footer { color: var(--muted); font-size: .8rem; }
   :root:root:not([data-theme="none"]) { --bg: #ffffff; --panel: #ffffff; --fg: #15212c; --muted: #4b5865; --line: #d5dbe1; --accent: #1d5a8c; --accent-soft: #d6e4f0;
     --ok: #2f8a4c; --warn: #d98a12; --bad: #c8372d; --none: #b7a6c9; --grid: #e8edf1; --axis: #b9c3cc; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; color-scheme: light; }
   body { padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .loader, .filters, .indeling, .seg, .duw, .link-knop, .inzicht .link, footer { display: none !important; }
+  .loader, .filters, .indeling, .seg, .duw, .link-knop, .inzicht .link, footer, .tabs, #vgl-beheer, #vgl-toevoegen, .mpchip button, dialog { display: none !important; }
   .card, tr { break-inside: avoid; }
   .tablebox { max-height: none; overflow: visible; }
   body.print-vgl #dash > section:not(#vergelijken), body.print-vgl .head .lede { display: none !important; }
@@ -219,13 +249,13 @@ footer { color: var(--muted); font-size: .8rem; }
       <div class="wide">
         <div class="card">
           <h3>Beleving per week</h3>
-          <p class="note">Aantal diensten per kleur. De gearceerde band is de laagwaterperiode uit het Excel.</p>
+          <p class="note">Aantal diensten per kleur. De gearceerde band is de laagwaterperiode uit het Excel. Klik op een week voor de details.</p>
           <ul class="legend"><li><span class="sw" style="background:var(--ok)"></span>Groen</li><li><span class="sw" style="background:var(--warn)"></span>Oranje</li><li><span class="sw" style="background:var(--bad)"></span>Rood</li><li><span class="sw" style="background:var(--none)"></span>Geen overdracht</li></ul>
           <div class="chart" id="c-week" style="min-height:270px"></div>
         </div>
         <div class="card">
           <h3>Dagdienst tegenover nachtdienst</h3>
-          <p class="note">Verdeling van de beleving en gemiddelde actieve vaartijd.</p>
+          <p class="note">Verdeling van de beleving en gemiddelde actieve vaartijd. Klik op een kleur voor die diensten.</p>
           <div class="chart" id="c-dn"></div>
           <p class="note" id="dn-text"></p>
         </div>
@@ -242,9 +272,9 @@ footer { color: var(--muted); font-size: .8rem; }
       <p class="sub">Elke toelichting bij een oranje of rode dienst (en elke extra opmerking) wordt automatisch ingedeeld in thema's op basis van trefwoorden. Klik op een thema om de meldingen te filteren.</p>
       <div class="grid">
         <div class="card"><h3>Oorzaken per thema</h3><p class="note">Aantal meldingen waarin het thema voorkomt. Eén melding kan meerdere thema's raken.</p><div class="chart" id="c-thema"></div></div>
-        <div class="card"><h3>Genoemde partijen</h3><p class="note">Hoe vaak een ketenpartij in de meldingen genoemd wordt. KVB staat voor koppelverbanden en zelfladers.</p><div class="chart" id="c-partij"></div></div>
+        <div class="card"><h3>Genoemde partijen</h3><p class="note">Hoe vaak een ketenpartij in de meldingen genoemd wordt. KVB staat voor koppelverbanden en zelfladers. Klik op een partij voor de meldingen.</p><div class="chart" id="c-partij"></div></div>
       </div>
-      <div class="card"><h3>Thema's door de weken heen</h3><p class="note">Hoe donkerder het vak, hoe vaker het thema die week genoemd werd.</p><div class="chart" id="c-heat"></div></div>
+      <div class="card"><h3>Thema's door de weken heen</h3><p class="note">Hoe donkerder het vak, hoe vaker het thema die week genoemd werd. Klik op een vak voor de meldingen.</p><div class="chart" id="c-heat"></div></div>
     </section>
 
     <section id="oplossingen">
@@ -281,26 +311,28 @@ footer { color: var(--muted); font-size: .8rem; }
 
     <section id="vergelijken" data-naam="Meetpunten vergelijken">
       <h2>Meetpunten vergelijken</h2>
-      <p class="sub">Kies zelf twee of drie meetpunten en leg ze over elkaar. Elk meetpunt kan: de kolommen uit het Excel, de beleving, het aantal meldingen en elk thema uit de meldingen. Berekend binnen de gekozen periode en dienst. Een verband zegt niets over oorzaak en gevolg.</p>
+      <p class="sub">Maak zoveel vergelijkingen als je wilt, elk met tot 8 meetpunten en een eigen soort grafiek. Elk meetpunt kan: de kolommen uit het Excel, de beleving, het aantal meldingen en elk thema uit de meldingen. Je vergelijkingen worden in deze browser bewaard; met "Link delen" stuur je er een naar een collega. Berekend binnen de gekozen periode en dienst. Een verband zegt niets over oorzaak en gevolg.</p>
       <p class="print-alleen" id="vgl-print"></p>
       <div class="card">
-        <div class="rij">
-          <label for="vgl-a">Meetpunt 1 <select id="vgl-a"></select></label>
-          <label for="vgl-b">Meetpunt 2 <select id="vgl-b"></select></label>
-          <label for="vgl-c">Meetpunt 3 <select id="vgl-c"></select></label>
+        <div class="tabs" id="vgl-tabs" role="tablist" aria-label="Bewaarde vergelijkingen"></div>
+        <div class="rij" id="vgl-beheer">
+          <label for="vgl-naam">Naam <input id="vgl-naam" type="text" maxlength="60" autocomplete="off"></label>
+          <span class="duw"><button class="btn-licht" type="button" id="vgl-kopie">Kopie maken</button><button class="btn-licht" type="button" id="vgl-link">Link delen</button><button class="btn-licht" type="button" id="vgl-verwijder">Verwijderen</button></span>
+          <span class="muted small" id="vgl-gedeeld" role="status"></span>
         </div>
+        <div class="mpchips"><span class="muted small">Meetpunten:</span><span class="mpchips" id="vgl-chips"></span><select id="vgl-toevoegen" aria-label="Meetpunt toevoegen"></select><span class="muted small" id="vgl-max"></span></div>
         <div class="rij"><span id="vgl-opties" class="rij"></span>
           <span class="duw"><button class="btn-licht" type="button" id="vgl-csv-week">CSV per week</button><button class="btn-licht" type="button" id="vgl-csv-dienst">CSV per dienst (alle meetpunten)</button><button class="btn-licht" type="button" id="vgl-pdf">PDF</button></span>
         </div>
         <div class="uitkomst" id="vgl-tekst" aria-live="polite"></div>
       </div>
-      <div class="grid">
-        <div class="card"><h3>Per week, over elkaar</h3><p class="note" id="vgl-noot"></p><ul class="legend" id="vgl-legend"></ul><div class="chart" id="c-vgl-week"></div></div>
-        <div class="card"><h3 id="vgl-dienst-titel">Per dienst</h3><p class="note">Elke stip is één dienst, gekleurd naar de beleving. Stippen liggen iets verspreid zodat ze niet over elkaar vallen. De streep laat de lijn van het verband zien.</p>
-          <ul class="legend"><li><span class="sw" style="background:var(--ok)"></span>Groen</li><li><span class="sw" style="background:var(--warn)"></span>Oranje</li><li><span class="sw" style="background:var(--bad)"></span>Rood</li><li><span class="sw" style="background:var(--axis)"></span>Overig</li></ul>
-          <div class="chart" id="c-vgl-dienst"></div></div>
+      <div class="card">
+        <p class="note" id="vgl-noot"></p>
+        <ul class="legend" id="vgl-legend"></ul>
+        <ul class="legend" id="vgl-blegend" hidden><li><span class="sw" style="background:var(--ok)"></span>Groen</li><li><span class="sw" style="background:var(--warn)"></span>Oranje</li><li><span class="sw" style="background:var(--bad)"></span>Rood</li><li><span class="sw" style="background:var(--axis)"></span>Overig</li></ul>
+        <div class="chart" id="c-vgl"></div>
       </div>
-      <div class="card"><details id="vgl-tabel-box"><summary class="small">Cijfers per week als tabel</summary><div class="tablebox" style="margin-top:8px"><table id="t-vgl"></table></div></details></div>
+      <div class="card"><details id="vgl-tabel-box"><summary class="small">Cijfers per week als tabel (klik op een week voor de details)</summary><div class="tablebox" style="margin-top:8px"><table id="t-vgl"></table></div></details></div>
     </section>
 
     <section id="samenhang">
@@ -308,7 +340,7 @@ footer { color: var(--muted); font-size: .8rem; }
       <p class="sub">Hoe hangen de meetpunten met elkaar samen? Berekend per dienst, binnen de gekozen periode en dienstfilter. Een nieuwe kolom in het Excel komt hier vanzelf bij. Een verband zegt niets over oorzaak en gevolg, en bij weinig diensten is het onzeker.</p>
       <div class="card">
         <div class="kaartkop"><h3>Alles vergeleken met één meetpunt</h3><label for="samen-doel" class="muted small" style="display:inline-flex;gap:6px;align-items:center">Vergelijk alles met <select id="samen-doel"></select></label></div>
-        <p class="note">Elk ander meetpunt naast het gekozen meetpunt, gesorteerd op de sterkte van het verband. Met "Bekijk" zie je het paar in de grafieken hierboven.</p>
+        <p class="note">Elk ander meetpunt naast het gekozen meetpunt, gesorteerd op de sterkte van het verband. Met "Bekijk" zie je het paar per dienst, en kun je het als vergelijking bewaren.</p>
         <div class="tablebox"><table>
           <thead><tr><th>Meetpunt</th><th class="num">Diensten</th><th class="num" id="samen-ja">Gem. als ja</th><th class="num" id="samen-nee">Gem. als nee</th><th class="num">Correlatie</th><th>Verband</th><th></th></tr></thead>
           <tbody id="t-samen"></tbody>
@@ -316,14 +348,14 @@ footer { color: var(--muted); font-size: .8rem; }
       </div>
       <div class="card">
         <h3>Meetpunten tegen elkaar</h3>
-        <p class="note">Correlatie per dienst (−1 tot 1) tussen de kolommen uit het Excel, de beleving en het aantal meldingen. Blauw: gaan samen omhoog. Rood: als de een stijgt, daalt de ander. Hoe voller de kleur, hoe sterker. Een leeg vak betekent te weinig diensten (minder dan 20) of een meetpunt dat niet varieert. Klik op een vak om dat paar te vergelijken.</p>
+        <p class="note">Correlatie per dienst (−1 tot 1) tussen de kolommen uit het Excel, de beleving en het aantal meldingen. Blauw: gaan samen omhoog. Rood: als de een stijgt, daalt de ander. Hoe voller de kleur, hoe sterker. Een leeg vak betekent te weinig diensten (minder dan 20) of een meetpunt dat niet varieert. Klik op een vak voor de details van dat paar.</p>
         <div class="chart" id="c-corr"></div>
       </div>
     </section>
 
     <section id="meldingen">
       <h2>Alle meldingen</h2>
-      <p class="sub">De toelichtingen bij oranje en rode diensten en de extra opmerkingen uit het Excel.</p>
+      <p class="sub">De toelichtingen bij oranje en rode diensten en de extra opmerkingen uit het Excel. Klik op een melding voor alles over die dienst.</p>
       <div class="card">
         <div class="controls"><label for="zoek" class="muted small">Zoeken</label><input id="zoek" type="search" placeholder="Bijv. HGK, anker, EMO"><span class="muted small"><span id="n-meld">0</span> meldingen</span></div>
         <div class="chips" id="chips" role="group" aria-label="Filter op thema"></div>
@@ -356,6 +388,11 @@ footer { color: var(--muted); font-size: .8rem; }
       </div>
     </section>
   </main>
+
+  <dialog id="detail" aria-labelledby="detail-titel">
+    <div class="detail-kop"><button class="btn-licht" type="button" id="detail-terug" hidden>← Terug</button><h2 id="detail-titel">Details</h2><button class="btn-licht" type="button" id="detail-sluit" aria-label="Sluiten">Sluiten</button></div>
+    <div id="detail-body"></div>
+  </dialog>
 
   <footer id="foot">Het Excel wordt alleen in je eigen browser gelezen en nergens naartoe gestuurd.</footer>
 </div>
@@ -732,7 +769,7 @@ function render() {
   drawPhases(D, dien, meld);
   drawHBar($('c-thema'), themaCount.map((t) => ({ key: t.code, label: t.naam, aantal: t.aantal })), true);
   const pc = PARTIJEN.map((p) => ({ key: p.naam, label: p.naam, aantal: meld.filter((m) => m.partijen.includes(p.naam)).length })).filter((p) => p.aantal).sort((a, b) => b.aantal - a.aantal);
-  drawHBar($('c-partij'), pc, false);
+  drawHBar($('c-partij'), pc, false, (p) => toonMeldingen('Meldingen waarin ' + p.label + ' genoemd wordt', meld.filter((m) => m.partijen.includes(p.key))));
   drawHeat($('c-heat'), meld, weeks, themaCount);
   drawRanking(meld);
   drawMinis(weeks, dien, D.kolommen);
@@ -778,7 +815,9 @@ function drawWeek(el, rows, laag) {
   svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6)).call(axisClean).call((g) => g.select('.domain').remove());
   const t = tipFor(el);
   svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-    .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week), [...BKEYS.map((k) => [BCOL[k], k, F.int(r[keyMap[k]])]), [null, 'Oranje of rood', r.pct == null ? '–' : F.pct(r.pct)]])).on('pointerleave', () => t.hide());
+    .attr('class', 'klik').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (r) => 'Details van week ' + wl(r.week))
+    .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week) + ' · klik voor details', [...BKEYS.map((k) => [BCOL[k], k, F.int(r[keyMap[k]])]), [null, 'Oranje of rood', r.pct == null ? '–' : F.pct(r.pct)]])).on('pointerleave', () => t.hide())
+    .on('click', (ev, r) => toonWeek(r.week)).on('keydown', (ev, r) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toonWeek(r.week); } });
 }
 
 function drawDN(el, all) {
@@ -793,7 +832,10 @@ function drawDN(el, all) {
     [['Groen', r.groen], ['Oranje', r.oranje], ['Rood', r.rood]].forEach(([k, v]) => {
       const w = tot ? v / tot : 0;
       svg.append('rect').attr('x', x(acc)).attr('y', y0).attr('width', Math.max(0, x(acc + w) - x(acc) - 1)).attr('height', 22).attr('rx', 2).style('fill', BCOL[k])
-        .on('pointermove', (ev) => t.show(ev, r.dienst + 'dienst', [[BCOL[k], k, F.int(v) + ' (' + F.pct(w) + ')']])).on('pointerleave', () => t.hide());
+        .attr('class', 'klik').attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${{ Groen: 'Groene', Oranje: 'Oranje', Rood: 'Rode' }[k]} ${r.dienst.toLowerCase()}diensten`)
+        .on('pointermove', (ev) => t.show(ev, r.dienst + 'dienst · klik voor de diensten', [[BCOL[k], k, F.int(v) + ' (' + F.pct(w) + ')']])).on('pointerleave', () => t.hide())
+        .on('click', () => toonLijst(`${{ Groen: 'Groene', Oranje: 'Oranje', Rood: 'Rode' }[k]} ${r.dienst.toLowerCase()}diensten`, null, all.filter((x) => x.dienst === r.dienst && x.beleving === k)))
+        .on('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.target.dispatchEvent(new MouseEvent('click')); } });
       acc += w;
     });
     svg.append('text').attr('class', 'val').attr('x', W - right + 8).attr('y', y0 + 15).text(r.vaart == null ? '' : F.dec1(r.vaart) + ' u vaart');
@@ -821,7 +863,7 @@ function drawPhases(D, dien, meld) {
   });
 }
 
-function drawHBar(el, rows, clickable) {
+function drawHBar(el, rows, clickable, opKlik) {
   el.replaceChildren(); if (!rows.length) { el.textContent = 'Geen meldingen in deze periode.'; el.className = 'chart empty'; return; } el.className = 'chart';
   const W = Math.max(260, el.clientWidth), rowH = 28, H = rows.length * rowH + 4;
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
@@ -830,6 +872,8 @@ function drawHBar(el, rows, clickable) {
   const g = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (r, i) => `translate(0,${i * rowH})`);
   if (clickable) g.attr('class', 'click').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (r) => 'Filter meldingen op ' + r.label)
     .on('click', (ev, r) => pickThema(r.key, true)).on('keydown', (ev, r) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickThema(r.key, true); } });
+  else if (opKlik) g.attr('class', 'click').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (r) => 'Meldingen over ' + r.label)
+    .on('click', (ev, r) => opKlik(r)).on('keydown', (ev, r) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); opKlik(r); } });
   g.append('text').attr('class', 'lbl').attr('x', 0).attr('y', 17).text((r) => r.label);
   g.append('rect').attr('x', lw).attr('y', 6).attr('height', 16).attr('rx', 2).attr('width', (r) => Math.max(1, x(r.aantal) - lw))
     .style('fill', (r, i) => (clickable && S.thema ? (r.key === S.thema ? 'var(--accent)' : 'var(--axis)') : (i < 3 ? 'var(--accent)' : 'var(--axis)')));
@@ -849,7 +893,10 @@ function drawHeat(el, meld, weeks, order) {
   svg.append('g').selectAll('text').data(themas).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (c, i) => i * cell + cell / 2 + 4).text(thNaam);
   svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + 1).attr('y', (c) => themas.indexOf(c.code) * cell + 1)
     .attr('width', cell - 2).attr('height', cell - 2).attr('rx', 2).style('fill', (c) => (c.n ? 'var(--accent)' : 'var(--grid)')).style('fill-opacity', (c) => (c.n ? .25 + .75 * c.n / max : 1))
-    .on('pointermove', (ev, c) => t.show(ev, 'Week ' + wl(c.week), [[null, thNaam(c.code), F.int(c.n) + (c.n === 1 ? ' melding' : ' meldingen')]])).on('pointerleave', () => t.hide());
+    .attr('class', (c) => (c.n ? 'klik' : null)).attr('tabindex', (c) => (c.n ? 0 : null)).attr('role', (c) => (c.n ? 'button' : null)).attr('aria-label', (c) => (c.n ? `${thNaam(c.code)}, week ${wl(c.week)}` : null))
+    .on('pointermove', (ev, c) => t.show(ev, 'Week ' + wl(c.week) + (c.n ? ' · klik voor de meldingen' : ''), [[null, thNaam(c.code), F.int(c.n) + (c.n === 1 ? ' melding' : ' meldingen')]])).on('pointerleave', () => t.hide())
+    .on('click', (ev, c) => { if (c.n) toonMeldingen(`${thNaam(c.code)} · week ${wl(c.week)}`, meld.filter((m) => m.week === c.week && m.themas.includes(c.code))); })
+    .on('keydown', (ev, c) => { if (c.n && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); toonMeldingen(`${thNaam(c.code)} · week ${wl(c.week)}`, meld.filter((m) => m.week === c.week && m.themas.includes(c.code))); } });
   svg.append('g').selectAll('text').data(cells.filter((c) => c.n)).join('text').attr('class', 'val').attr('x', (c) => lw + weeks.indexOf(c.week) * cell + cell / 2).attr('y', (c) => themas.indexOf(c.code) * cell + cell / 2 + 4)
     .attr('text-anchor', 'middle').style('fill', 'var(--bg)').style('pointer-events', 'none').text((c) => c.n);
   svg.append('g').selectAll('text').data(weeks).join('text').attr('x', (w, i) => lw + i * cell + cell / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((w, i) => (cell >= 26 || i % 2 === 0 ? wl(w) : ''));
@@ -918,7 +965,8 @@ function drawMinis(weeks, dien, kolommen) {
     svg.append('text').attr('x', W - m.r).attr('y', H - 4).attr('text-anchor', 'end').text('wk ' + wl(rows[rows.length - 1].week));
     const t = tipFor(el);
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
-      .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week), [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
+      .attr('class', 'klik').on('click', (ev, r) => toonWeek(r.week))
+      .on('pointermove', (ev, r) => t.show(ev, 'Week ' + wl(r.week) + ' · klik voor details', [[null, title, r[key] == null ? '–' : f(r[key])]])).on('pointerleave', () => t.hide());
     });
   });
   teken.forEach((f) => f());
@@ -976,28 +1024,6 @@ const mpGemFmt = (mp, v) => (v == null ? '–' : mp.agg === 'pct' ? F.pct(v) : n
 const mpWeekNaam = (mp) => mp.label + (mp.agg === 'pct' ? ' (% van de diensten)' : mp.agg === 'gem' ? ' (gem. per dienst)' : ' (totaal per week)');
 const paren = (dien, A, B) => dien.map((r) => [A.get(r), B.get(r)]).filter(([a, b]) => a != null && b != null);
 
-// Keuzelijsten vullen met alle meetpunten, gegroepeerd
-function vulMeetpuntKeuzes() {
-  const MP = S.mp; const groepen = [...new Set(MP.map((m) => m.groep))];
-  const vul = (sel, metGeen) => {
-    sel.replaceChildren(); if (metGeen) sel.appendChild(new Option('Geen', ''));
-    groepen.forEach((g) => { const og = document.createElement('optgroup'); og.label = g; MP.filter((m) => m.groep === g).forEach((m) => og.appendChild(new Option(m.label, m.key))); sel.appendChild(og); });
-  };
-  vul($('vgl-a'), false); vul($('vgl-b'), true); vul($('vgl-c'), true); vul($('samen-doel'), false);
-  const V = VK.vgl; const kol = (re) => (MP.find((m) => m.key.startsWith('k:') && re.test(m.key)) || {}).key;
-  if (!mpVan(V.a)) V.a = 'b:or';
-  if (V.b !== '' && !mpVan(V.b)) V.b = kol(/sterkte/) || kol(/vaartijd/) || 'meld:n';
-  if (V.c && !mpVan(V.c)) V.c = '';
-  if (!mpVan(VK.doel)) VK.doel = 'b:or';
-  $('vgl-a').value = V.a; $('vgl-b').value = V.b || ''; $('vgl-c').value = V.c || ''; $('samen-doel').value = VK.doel;
-}
-function kiesPaar(a, b) {
-  VK.vgl.a = a; VK.vgl.b = b; if (VK.vgl.c === a || VK.vgl.c === b) VK.vgl.c = ''; vkBewaar();
-  $('vgl-a').value = a; $('vgl-b').value = b; $('vgl-c').value = VK.vgl.c || '';
-  const sec = $('vergelijken'); if (sec.classList.contains('verborgen')) { sec.classList.remove('verborgen'); }
-  render(); sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-}
-
 /* ===== Samenhang: alles tegen één gekozen meetpunt, en een matrix ===== */
 function drawSamenhang(dien) {
   const MP = S.mp; const doel = mpVan(VK.doel) || MP[0]; const ja = doel.agg === 'pct';
@@ -1015,7 +1041,7 @@ function drawSamenhang(dien) {
     td(ja ? mpGemFmt(x.m, x.gJa) : '', 'num'); td(ja ? mpGemFmt(x.m, x.gNee) : '', 'num');
     td(x.r == null ? '–' : nl.format('.2f')(x.r), 'num');
     td(x.r == null ? 'te weinig gegevens' : sterkteWoord(x.r) + (Math.abs(x.r) >= 0.1 ? (x.r > 0 ? ', gaan samen omhoog' : ', tegengesteld') : ''));
-    const c = td(''); const b = document.createElement('button'); b.type = 'button'; b.className = 'link-knop'; b.textContent = 'Bekijk'; b.setAttribute('aria-label', 'Bekijk ' + x.m.label + ' tegen ' + doel.label);
+    const c = td(''); const b = document.createElement('button'); b.type = 'button'; b.className = 'link-knop'; b.textContent = 'Bekijk'; b.setAttribute('aria-label', 'Bekijk ' + x.m.label + ' tegen ' + doel.label + ' per dienst');
     b.addEventListener('click', () => kiesPaar(doel.key, x.m.key)); c.appendChild(b);
     tb.appendChild(tr);
   });
@@ -1044,9 +1070,64 @@ function drawSamenhang(dien) {
   const leg = document.createElement('p'); leg.className = 'note'; leg.textContent = 'Kolommen onderaan: ' + vars.slice(0, -1).map((v, j) => `${j + 1} ${v.label}`).join(' · '); el.appendChild(leg);
 }
 
-/* ===== Meetpunten vergelijken: over elkaar per week, en per dienst tegen elkaar ===== */
-const SERIE_KLEUR = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
-function gekozenMeetpunten() { const V = VK.vgl; const uit = []; [V.a, V.b, V.c].forEach((k) => { const m = mpVan(k); if (m && !uit.includes(m)) uit.push(m); }); return uit; }
+/* ===== Meetpunten vergelijken: meerdere bewaarde vergelijkingen, elk met tot 8 meetpunten en een eigen grafiek ===== */
+const SERIE_KLEUR = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)', 'var(--s7)', 'var(--s8)'];
+const MAX_MP = 8;
+const GRAFIEKEN = [['lijn', 'Lijn'], ['staaf', 'Staaf'], ['gestapeld', 'Gestapeld'], ['klein', 'Onder elkaar'], ['spreiding', 'Per dienst'], ['samenhang', 'Samenhang']];
+const GRAFIEK_UITLEG = {
+  lijn: 'Per week, de lijnen over elkaar.', staaf: 'Per week, de staven naast elkaar.',
+  gestapeld: 'Per week, de waarden op elkaar gestapeld. Dat is vooral zinvol bij tellingen, zoals aantallen meldingen.',
+  klein: 'Elk meetpunt een eigen grafiek, onder elkaar met dezelfde weken. Handig bij veel meetpunten.',
+  spreiding: 'Per dienst: het eerste meetpunt tegen elk ander meetpunt. Elke stip is één dienst, gekleurd naar de beleving.',
+  samenhang: 'Hoe sterk elk paar meetpunten samenhangt (correlatie per dienst). Klik op een vak voor de details.'
+};
+const nieuweId = () => 'v' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+function schoonVersie(v) {
+  if (!v || typeof v !== 'object') return null;
+  const mp = (Array.isArray(v.mp) ? v.mp : []).filter((x) => x && typeof x.key === 'string').slice(0, MAX_MP).map((x) => ({ key: x.key, kleur: Number.isInteger(x.kleur) && x.kleur >= 0 && x.kleur < MAX_MP ? x.kleur : 0 }));
+  return { id: typeof v.id === 'string' ? v.id : nieuweId(), naam: typeof v.naam === 'string' && v.naam.trim() ? v.naam.slice(0, 60) : 'Vergelijking', mp,
+    grafiek: GRAFIEKEN.some(([g]) => g === v.grafiek) ? v.grafiek : 'lijn', schaal: v.schaal === 'zelfde' ? 'zelfde' : 'eigen' };
+}
+(() => {
+  // Bewaarde vergelijkingen ophalen; de vorige versie (VK.vgl met 3 meetpunten) wordt de eerste vergelijking
+  VK.versies = (Array.isArray(VK.versies) ? VK.versies : []).map(schoonVersie).filter(Boolean);
+  if (!VK.versies.length && VK.vgl && (VK.vgl.a || VK.vgl.b)) {
+    VK.versies.push(schoonVersie({ naam: 'Vergelijking 1', mp: [VK.vgl.a, VK.vgl.b, VK.vgl.c].filter(Boolean).map((key, i) => ({ key, kleur: i })), grafiek: VK.vgl.type === 'staaf' ? 'staaf' : 'lijn', schaal: VK.vgl.schaal }));
+  }
+  delete VK.vgl;
+})();
+const actieveVersie = () => VK.versies.find((v) => v.id === VK.actief) || VK.versies[0];
+const vrijeKleur = (v) => { for (let i = 0; i < MAX_MP; i++) if (!v.mp.some((x) => x.kleur === i)) return i; return 0; };
+function versieMeetpunten(v) { return v.mp.map((x) => ({ mp: mpVan(x.key), kleur: SERIE_KLEUR[x.kleur] })).filter((x) => x.mp); }
+
+// Keuzelijsten vullen met alle meetpunten, gegroepeerd
+function vulMeetpuntKeuzes() {
+  const MP = S.mp; const groepen = [...new Set(MP.map((m) => m.groep))];
+  const vul = (sel, eerste) => {
+    sel.replaceChildren(); if (eerste) sel.appendChild(new Option(eerste, ''));
+    groepen.forEach((g) => { const og = document.createElement('optgroup'); og.label = g; MP.filter((m) => m.groep === g).forEach((m) => og.appendChild(new Option(m.label, m.key))); sel.appendChild(og); });
+  };
+  vul($('vgl-toevoegen'), '+ Meetpunt toevoegen…'); vul($('samen-doel'), null);
+  if (!mpVan(VK.doel)) VK.doel = 'b:or';
+  $('samen-doel').value = VK.doel;
+  if (!VK.versies.length) {
+    const kol = (re) => (MP.find((m) => m.key.startsWith('k:') && re.test(m.key)) || {}).key;
+    VK.versies.push(schoonVersie({ naam: 'Vergelijking 1', mp: ['b:or', kol(/sterkte/) || kol(/vaartijd/) || 'meld:n'].map((key, i) => ({ key, kleur: i })) }));
+  }
+  if (!VK.versies.some((v) => v.id === VK.actief)) VK.actief = VK.versies[0].id;
+  vkBewaar();
+}
+function nieuweVersie(basis) {
+  const v = schoonVersie(basis || { naam: 'Vergelijking ' + (VK.versies.length + 1), mp: [{ key: 'b:or', kleur: 0 }] });
+  v.id = nieuweId(); VK.versies.push(v); VK.actief = v.id; vkBewaar(); render(); return v;
+}
+function naarVergelijken() {
+  const sec = $('vergelijken'); sec.classList.remove('verborgen');
+  sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+// Een paar meetpunten (uit de samenhang) bekijken: details tonen, met de keuze om het als vergelijking te bewaren
+function kiesPaar(a, b) { toonPaar(mpVan(a), mpVan(b)); }
+
 function verbandZin(dien, A, B) {
   const ps = paren(dien, A, B); const r = pearson(ps);
   if (r == null) return `${A.label} en ${kleinLetter(B.label)}: niet te zeggen. Daarvoor zijn minstens 20 diensten nodig waarin beide zijn ingevuld en beide verschillen (nu ${F.int(ps.length)}).`;
@@ -1061,75 +1142,163 @@ function verbandZin(dien, A, B) {
   if (Math.abs(r) < 0.1) return kop;
   return kop + ` Hoe hoger ${kleinLetter(A.label)}, hoe ${r > 0 ? 'hoger' : 'lager'} ${kleinLetter(B.label)} meestal is.`;
 }
+
 function drawVergelijk(weeks, dien) {
-  const V = VK.vgl; const sel = gekozenMeetpunten();
-  $('vgl-opties').replaceChildren(
-    seg([['lijn', 'Lijn'], ['staaf', 'Staaf']], V.type, (v) => { V.type = v; vkBewaar(); render(); }, 'Grafiektype'),
-    seg([['eigen', 'Ieder een eigen schaal'], ['zelfde', 'Zelfde schaal']], V.schaal, (v) => { V.schaal = v; vkBewaar(); render(); }, 'Schaal'));
+  const v = actieveVersie(); if (!v) return;
+  // Tabbladen met de bewaarde vergelijkingen
+  const tabs = $('vgl-tabs'); tabs.replaceChildren();
+  VK.versies.forEach((x) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tab'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(x.id === v.id)); b.textContent = x.naam;
+    b.addEventListener('click', () => { VK.actief = x.id; vkBewaar(); render(); }); tabs.appendChild(b); });
+  const plus = document.createElement('button'); plus.type = 'button'; plus.className = 'tab tab-plus'; plus.textContent = '+ Nieuwe vergelijking'; plus.addEventListener('click', () => { nieuweVersie(); $('vgl-naam').focus(); $('vgl-naam').select(); }); tabs.appendChild(plus);
+  if (document.activeElement !== $('vgl-naam')) $('vgl-naam').value = v.naam;
+  $('vgl-verwijder').disabled = VK.versies.length < 2;
+  // Gekozen meetpunten als chips met een kruisje
+  const sel = versieMeetpunten(v);
+  const chips = $('vgl-chips'); chips.replaceChildren();
+  sel.forEach(({ mp, kleur }) => { const c = document.createElement('span'); c.className = 'mpchip'; const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = kleur;
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', mp.label + ' weghalen');
+    x.addEventListener('click', () => { v.mp = v.mp.filter((m) => m.key !== mp.key); vkBewaar(); render(); });
+    c.append(sw, mp.label, x); chips.appendChild(c); });
+  const toev = $('vgl-toevoegen'); toev.value = ''; toev.disabled = v.mp.length >= MAX_MP;
+  [...toev.querySelectorAll('option')].forEach((o) => { if (o.value) o.disabled = v.mp.some((m) => m.key === o.value); });
+  $('vgl-max').textContent = v.mp.length >= MAX_MP ? `Maximaal ${MAX_MP} meetpunten per vergelijking.` : '';
+  // Grafiekkeuze
+  const opties = [seg(GRAFIEKEN, v.grafiek, (g) => { v.grafiek = g; vkBewaar(); render(); }, 'Soort grafiek')];
+  if (['lijn', 'staaf'].includes(v.grafiek)) opties.push(seg([['eigen', 'Ieder een eigen schaal'], ['zelfde', 'Zelfde schaal']], v.schaal, (s) => { v.schaal = s; vkBewaar(); render(); }, 'Schaal'));
+  $('vgl-opties').replaceChildren(...opties);
+  // Uitkomst in woorden: het eerste meetpunt tegen de andere, sterkste verband eerst
   const tekst = $('vgl-tekst'); tekst.replaceChildren();
-  for (let i = 0; i < sel.length; i++) for (let j = i + 1; j < sel.length; j++) { const p = document.createElement('p'); p.textContent = verbandZin(dien, sel[i], sel[j]); tekst.appendChild(p); }
-  if (sel.length < 2) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Kies een tweede meetpunt om te zien of ze samenhangen.'; tekst.appendChild(p); }
-  $('vgl-print').textContent = `Overdracht Bison · week ${wl(S.van)} t/m ${wl(S.tot)} · ${S.dienst ? S.dienst.toLowerCase() + 'diensten' : 'dag- en nachtdiensten'} · meetpunten: ${sel.map((m) => m.label).join(', ')}`;
+  if (sel.length >= 2) {
+    const A = sel[0].mp; sel.slice(1).map(({ mp }) => ({ mp, r: pearson(paren(dien, A, mp)) })).sort((a, b) => Math.abs(b.r || 0) - Math.abs(a.r || 0))
+      .forEach(({ mp }) => { const p = document.createElement('p'); p.textContent = verbandZin(dien, A, mp); tekst.appendChild(p); });
+    if (sel.length > 2) { const p = document.createElement('p'); p.className = 'muted small'; p.textContent = 'Hierboven staat het eerste meetpunt tegen de andere. Alle paren zie je bij de grafiek "Samenhang".'; tekst.appendChild(p); }
+  } else { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Voeg een tweede meetpunt toe om te zien of ze samenhangen.'; tekst.appendChild(p); }
+  $('vgl-print').textContent = `Overdracht Bison · ${v.naam} · week ${wl(S.van)} t/m ${wl(S.tot)} · ${S.dienst ? S.dienst.toLowerCase() + 'diensten' : 'dag- en nachtdiensten'} · meetpunten: ${sel.map((x) => x.mp.label).join(', ')}`;
   // Reeksen per week
-  const eigen = V.schaal === 'eigen';
-  const reeksen = sel.map((mp, i) => {
+  const eigen = v.schaal === 'eigen' && ['lijn', 'staaf'].includes(v.grafiek);
+  const reeksen = sel.map(({ mp, kleur }) => {
     const vals = weeks.map((w) => ({ week: w, v: mpWeek(mp, dien.filter((r) => r.week === w)) }));
     const max = d3.max(vals, (d) => Math.abs(d.v || 0)) || 0;
-    return { mp, kleur: SERIE_KLEUR[i], vals: vals.map((d) => ({ ...d, y: d.v == null ? null : eigen ? (max ? d.v / max : 0) : d.v })) };
+    return { mp, kleur, vals: vals.map((d) => ({ ...d, y: d.v == null ? null : eigen ? (max ? d.v / max : 0) : d.v })) };
   });
-  const leg = $('vgl-legend'); leg.replaceChildren();
-  reeksen.forEach((s) => { const li = document.createElement('li'); const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.kleur; li.append(sw, mpWeekNaam(s.mp)); leg.appendChild(li); });
-  const verschilt = new Set(sel.map((m) => m.agg + (m.eenheid || ''))).size > 1;
-  $('vgl-noot').textContent = eigen ? 'Elk meetpunt op zijn eigen schaal: 100% is de hoogste week van dat meetpunt. Zo zie je of ze samen stijgen en dalen. De echte waarden staan bij de muis en in de tabel.'
-    : 'Alle meetpunten op dezelfde schaal.' + (verschilt ? ' Let op: de meetpunten hebben verschillende eenheden (aandeel, gemiddelde, totaal), dus kies liever "Ieder een eigen schaal".' : '');
-  tekenVglWeek($('c-vgl-week'), reeksen, weeks, eigen, V.type);
-  tekenVglDienst($('c-vgl-dienst'), dien, sel[0], sel[1]);
+  const leg = $('vgl-legend'); leg.replaceChildren(); leg.hidden = ['spreiding', 'samenhang', 'klein'].includes(v.grafiek);
+  if (S.uitlicht && !sel.some((x) => x.mp.key === S.uitlicht)) S.uitlicht = null;
+  // Klik op een meetpunt in de legenda om het uit te lichten
+  reeksen.forEach((s) => { const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button'; b.className = 'legknop'; b.setAttribute('aria-pressed', String(S.uitlicht === s.mp.key));
+    b.title = 'Klik om dit meetpunt uit te lichten'; const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.kleur; b.append(sw, mpWeekNaam(s.mp));
+    b.addEventListener('click', () => { S.uitlicht = S.uitlicht === s.mp.key ? null : s.mp.key; render(); }); li.appendChild(b); leg.appendChild(li); });
+  reeksen.forEach((s) => { s.dim = S.uitlicht && S.uitlicht !== s.mp.key; });
+  $('vgl-blegend').hidden = v.grafiek !== 'spreiding';
+  const verschilt = new Set(sel.map((x) => x.mp.agg + (x.mp.eenheid || ''))).size > 1;
+  let noot = GRAFIEK_UITLEG[v.grafiek];
+  if (['lijn', 'staaf'].includes(v.grafiek)) noot += eigen ? ' Elk meetpunt op zijn eigen schaal: 100% is de hoogste week van dat meetpunt.' : (verschilt ? ' Let op: de meetpunten hebben verschillende eenheden, kies liever "Ieder een eigen schaal".' : ' Alle meetpunten op dezelfde schaal.');
+  if (['lijn', 'staaf', 'gestapeld', 'klein'].includes(v.grafiek)) noot += ' Klik op een week voor de details.';
+  if (['lijn', 'staaf', 'gestapeld'].includes(v.grafiek) && sel.length > 1) noot += ' Klik op een meetpunt in de legenda om het uit te lichten.';
+  if (v.grafiek === 'gestapeld' && verschilt) noot += ' Let op: hier staan meetpunten met verschillende eenheden op elkaar.';
+  $('vgl-noot').textContent = noot;
+  const el = $('c-vgl'); el.replaceChildren();
+  if (!sel.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Voeg een meetpunt toe.'; el.appendChild(p); }
+  else if (v.grafiek === 'lijn' || v.grafiek === 'staaf') tekenVglWeek(el, reeksen, weeks, eigen, v.grafiek);
+  else if (v.grafiek === 'gestapeld') tekenVglGestapeld(el, reeksen, weeks);
+  else if (v.grafiek === 'klein') tekenVglKlein(el, reeksen, weeks);
+  else if (v.grafiek === 'spreiding') tekenVglSpreiding(el, dien, sel);
+  else tekenVglMatrix(el, dien, sel);
   // Tabel per week
   const tab = $('t-vgl'); tab.replaceChildren();
   const thead = document.createElement('thead'); const hr = document.createElement('tr');
-  ['Week', ...sel.map(mpWeekNaam)].forEach((t, i) => { const th = document.createElement('th'); th.textContent = t; if (i) th.className = 'num'; hr.appendChild(th); }); thead.appendChild(hr);
+  ['Week', ...sel.map((x) => mpWeekNaam(x.mp))].forEach((t, i) => { const th = document.createElement('th'); th.textContent = t; if (i) th.className = 'num'; hr.appendChild(th); }); thead.appendChild(hr);
   const tbody = document.createElement('tbody');
-  weeks.forEach((w, wi) => { const tr = document.createElement('tr'); const td0 = document.createElement('td'); td0.textContent = 'Week ' + wl(w); td0.style.whiteSpace = 'nowrap'; tr.appendChild(td0);
-    reeksen.forEach((s) => { const td = document.createElement('td'); td.className = 'num'; td.textContent = mpFmt(s.mp, s.vals[wi].v); tr.appendChild(td); }); tbody.appendChild(tr); });
+  weeks.forEach((w, wi) => { const tr = document.createElement('tr'); tr.className = 'klikrij'; tr.tabIndex = 0; tr.title = 'Details van week ' + wl(w);
+    const td0 = document.createElement('td'); td0.textContent = 'Week ' + wl(w); td0.style.whiteSpace = 'nowrap'; tr.appendChild(td0);
+    reeksen.forEach((s) => { const td = document.createElement('td'); td.className = 'num'; td.textContent = mpFmt(s.mp, s.vals[wi].v); tr.appendChild(td); });
+    klikbaar(tr, () => toonWeek(w)); tbody.appendChild(tr); });
   tab.append(thead, tbody);
 }
+// Maakt een element klikbaar met muis en toetsenbord
+function klikbaar(el, fn) {
+  const node = el.node ? el.node() : el;
+  node.addEventListener('click', fn); node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+}
+const asWeken = (x) => x.domain().filter((w, i) => i % Math.max(1, Math.ceil(44 / x.step())) === 0);
+// Doorzichtige vlakken per week voor muis-uitleg en klikken
+function weekVlakken(svg, el, x, weeks, top, hoogte, regels) {
+  const t = tipFor(el); const hl = svg.append('line').attr('y1', top).attr('y2', top + hoogte).style('stroke', 'var(--axis)').style('pointer-events', 'none').attr('visibility', 'hidden');
+  svg.append('g').selectAll('rect').data(weeks).join('rect').attr('class', 'klik').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (w) => 'Details van week ' + wl(w))
+    .attr('x', (w) => x(w) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', top).attr('height', hoogte).style('fill', 'transparent')
+    .on('pointermove', (ev, w) => { hl.attr('x1', x(w) + x.bandwidth() / 2).attr('x2', x(w) + x.bandwidth() / 2).attr('visibility', 'visible'); t.show(ev, 'Week ' + wl(w) + ' · klik voor details', regels(w)); })
+    .on('pointerleave', () => { t.hide(); hl.attr('visibility', 'hidden'); })
+    .on('click', (ev, w) => toonWeek(w)).on('keydown', (ev, w) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toonWeek(w); } });
+}
 function tekenVglWeek(el, reeksen, weeks, eigen, type) {
-  el.replaceChildren();
-  if (!reeksen.length || !weeks.length) { el.textContent = 'Kies een meetpunt.'; return; }
-  const W = Math.max(300, el.clientWidth), H = 280, m = { t: 12, r: 12, b: 28, l: 44 };
-  const x = d3.scaleBand(weeks, [m.l, W - m.r]).padding(type === 'staaf' ? 0.18 : 0.3);
+  if (!weeks.length) return;
+  const W = Math.max(300, el.clientWidth), H = 300, m = { t: 12, r: 12, b: 28, l: 44 };
+  const x = d3.scaleBand(weeks, [m.l, W - m.r]).padding(type === 'staaf' ? 0.15 : 0.3);
   const ys = reeksen.flatMap((s) => s.vals.map((d) => d.y)).filter((v) => v != null);
   const y = d3.scaleLinear([Math.min(0, d3.min(ys) || 0), eigen ? 1 : (d3.max(ys) || 1)], [H - m.b, m.t]).nice();
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Meetpunten per week: ' + reeksen.map((s) => s.mp.label).join(', '));
   svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
   const yFmt = eigen ? nl.format('.0%') : (reeksen.every((s) => s.mp.agg === 'pct') ? nl.format('.0%') : nl.format(',~g'));
   svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6).tickFormat(yFmt)).call(axisClean).call((g) => g.select('.domain').remove());
-  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(x.domain().filter((w, i) => i % Math.max(1, Math.ceil(44 / x.step())) === 0)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(asWeken(x)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
   if (type === 'staaf') {
     const x1 = d3.scaleBand(reeksen.map((s, i) => i), [0, x.bandwidth()]).padding(0.08);
     reeksen.forEach((s, i) => svg.append('g').selectAll('rect').data(s.vals.filter((d) => d.y != null)).join('rect')
-      .attr('x', (d) => x(d.week) + x1(i)).attr('width', Math.max(1, x1.bandwidth())).attr('y', (d) => Math.min(y(d.y), y(0))).attr('height', (d) => Math.max(1, Math.abs(y(0) - y(d.y)))).attr('rx', 1.5).style('fill', s.kleur));
+      .attr('x', (d) => x(d.week) + x1(i)).attr('width', Math.max(1, x1.bandwidth())).attr('y', (d) => Math.min(y(d.y), y(0))).attr('height', (d) => Math.max(1, Math.abs(y(0) - y(d.y)))).attr('rx', 1.5).style('fill', s.kleur).style('opacity', s.dim ? 0.15 : 1));
   } else {
-    reeksen.forEach((s) => {
-      svg.append('path').datum(s.vals).attr('d', d3.line().defined((d) => d.y != null).x((d) => x(d.week) + x.bandwidth() / 2).y((d) => y(d.y))).style('fill', 'none').style('stroke', s.kleur).style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
-      svg.append('g').selectAll('circle').data(s.vals.filter((d) => d.y != null)).join('circle').attr('cx', (d) => x(d.week) + x.bandwidth() / 2).attr('cy', (d) => y(d.y)).attr('r', 3.5).style('fill', s.kleur).style('stroke', 'var(--panel)').style('stroke-width', 1.5);
+    reeksen.slice().sort((a, b) => (a.dim === b.dim ? 0 : a.dim ? -1 : 1)).forEach((s) => {
+      const g0 = svg.append('g').style('opacity', s.dim ? 0.15 : 1);
+      g0.append('path').datum(s.vals).attr('d', d3.line().defined((d) => d.y != null).x((d) => x(d.week) + x.bandwidth() / 2).y((d) => y(d.y))).style('fill', 'none').style('stroke', s.kleur).style('stroke-width', S.uitlicht && !s.dim ? 3 : 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
+      g0.append('g').selectAll('circle').data(s.vals.filter((d) => d.y != null)).join('circle').attr('cx', (d) => x(d.week) + x.bandwidth() / 2).attr('cy', (d) => y(d.y)).attr('r', 3.5).style('fill', s.kleur).style('stroke', 'var(--panel)').style('stroke-width', 1.5);
     });
   }
-  const t = tipFor(el); const hl = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--axis)').style('pointer-events', 'none').attr('visibility', 'hidden');
-  svg.append('g').selectAll('rect').data(weeks).join('rect').attr('x', (w) => x(w) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-    .on('pointermove', (ev, w) => { const i = weeks.indexOf(w); hl.attr('x1', x(w) + x.bandwidth() / 2).attr('x2', x(w) + x.bandwidth() / 2).attr('visibility', 'visible');
-      t.show(ev, 'Week ' + wl(w), reeksen.map((s) => [s.kleur, s.mp.label, mpFmt(s.mp, s.vals[i].v)])); })
-    .on('pointerleave', () => { t.hide(); hl.attr('visibility', 'hidden'); });
+  weekVlakken(svg, el, x, weeks, m.t, H - m.b - m.t, (w) => { const i = weeks.indexOf(w); return reeksen.map((s) => [s.kleur, s.mp.label, mpFmt(s.mp, s.vals[i].v)]); });
 }
-function tekenVglDienst(el, dien, A, B) {
-  el.replaceChildren(); $('vgl-dienst-titel').textContent = A && B ? `Per dienst: ${A.label} tegen ${kleinLetter(B.label)}` : 'Per dienst';
-  if (!A || !B) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Kies een tweede meetpunt om de diensten tegen elkaar te zetten.'; el.appendChild(p); return; }
+function tekenVglGestapeld(el, reeksen, weeks) {
+  if (!weeks.length) return;
+  const W = Math.max(300, el.clientWidth), H = 300, m = { t: 12, r: 12, b: 28, l: 44 };
+  const x = d3.scaleBand(weeks, [m.l, W - m.r]).padding(0.2);
+  const rows = weeks.map((w, i) => { const o = { week: w }; reeksen.forEach((s, j) => { o[j] = Math.max(0, s.vals[i].v || 0); }); return o; });
+  const stack = d3.stack().keys(reeksen.map((s, j) => j))(rows);
+  const y = d3.scaleLinear([0, d3.max(stack.length ? stack[stack.length - 1] : [], (d) => d[1]) || 1], [H - m.b, m.t]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gestapeld per week');
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(6).tickFormat(nl.format(',~g'))).call(axisClean).call((g) => g.select('.domain').remove());
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(asWeken(x)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
+  svg.append('g').selectAll('g').data(stack).join('g').style('fill', (s) => reeksen[s.key].kleur).style('opacity', (s) => (reeksen[s.key].dim ? 0.15 : 1)).selectAll('rect').data((s) => s).join('rect')
+    .attr('x', (d) => x(d.data.week)).attr('width', x.bandwidth()).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - (d[1] > d[0] ? 1 : 0))).attr('rx', 1.5);
+  weekVlakken(svg, el, x, weeks, m.t, H - m.b - m.t, (w) => { const i = weeks.indexOf(w); return reeksen.map((s) => [s.kleur, s.mp.label, mpFmt(s.mp, s.vals[i].v)]); });
+}
+function tekenVglKlein(el, reeksen, weeks) {
+  if (!weeks.length) return;
+  const W = Math.max(300, el.clientWidth), rijH = 92, kopH = 18, m = { l: 44, r: 12, b: 26 };
+  const H = reeksen.length * (rijH + kopH) + m.b;
+  const x = d3.scaleBand(weeks, [m.l, W - m.r]).padding(0.25);
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Elk meetpunt een eigen grafiek');
+  reeksen.forEach((s, i) => {
+    const top = i * (rijH + kopH) + kopH; const vs = s.vals.map((d) => d.v).filter((v) => v != null);
+    const y = d3.scaleLinear([Math.min(0, d3.min(vs) || 0), d3.max(vs) || 1], [top + rijH - 6, top + 4]).nice();
+    const fmt = s.mp.agg === 'pct' ? nl.format('.0%') : nl.format(',~g');
+    svg.append('rect').attr('x', 0).attr('y', top - kopH + 4).attr('width', 9).attr('height', 9).attr('rx', 2).style('fill', s.kleur);
+    svg.append('text').attr('class', 'lbl').attr('x', 14).attr('y', top - kopH + 13).text(mpWeekNaam(s.mp));
+    svg.append('g').selectAll('line').data(y.ticks(2)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--grid)');
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(2).tickSize(0).tickPadding(6).tickFormat(fmt)).call(axisClean).call((g) => g.select('.domain').remove());
+    if (s.mp.agg === 'som') svg.append('g').selectAll('rect').data(s.vals.filter((d) => d.v != null)).join('rect').attr('x', (d) => x(d.week)).attr('width', x.bandwidth()).attr('y', (d) => Math.min(y(d.v), y(0))).attr('height', (d) => Math.abs(y(0) - y(d.v))).attr('rx', 1.5).style('fill', s.kleur);
+    else {
+      svg.append('path').datum(s.vals).attr('d', d3.line().defined((d) => d.v != null).x((d) => x(d.week) + x.bandwidth() / 2).y((d) => y(d.v))).style('fill', 'none').style('stroke', s.kleur).style('stroke-width', 2).style('stroke-linejoin', 'round');
+      svg.append('g').selectAll('circle').data(s.vals.filter((d) => d.v != null)).join('circle').attr('cx', (d) => x(d.week) + x.bandwidth() / 2).attr('cy', (d) => y(d.v)).attr('r', 3).style('fill', s.kleur);
+    }
+  });
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickValues(asWeken(x)).tickFormat((w) => 'wk ' + wl(w))).call(axisClean);
+  weekVlakken(svg, el, x, weeks, 0, H - m.b, (w) => { const i = weeks.indexOf(w); return reeksen.map((s) => [s.kleur, s.mp.label, mpFmt(s.mp, s.vals[i].v)]); });
+}
+// Spreidingsdiagram: één dienst per stip. Klik op een stip voor de details van die dienst.
+function tekenSpreiding(el, dien, A, B, opties = {}) {
   const pts = dien.map((r) => ({ r, x: A.get(r), y: B.get(r) })).filter((p) => p.x != null && p.y != null);
   if (!pts.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Geen diensten waarin beide meetpunten zijn ingevuld.'; el.appendChild(p); return; }
   const discreet = (vs) => vs.every(Number.isInteger) && new Set(vs).size <= 15;
   const dx = discreet(pts.map((p) => p.x)), dy = discreet(pts.map((p) => p.y));
   const rnd = (i, s) => { const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v) - 0.5; };
-  const W = Math.max(280, el.clientWidth), H = 280, m = { t: 22, r: 12, b: 34, l: 44 };
+  const W = Math.max(260, el.clientWidth), H = opties.hoogte || 260, m = { t: 22, r: 12, b: 34, l: 44 };
   const ext = (vs, d) => { let [a, b] = d3.extent(vs); if (a === b) { a -= 1; b += 1; } return d ? [a - 0.5, b + 0.5] : [a - (b - a) * 0.04, b + (b - a) * 0.04]; };
   const x = d3.scaleLinear(ext(pts.map((p) => p.x), dx), [m.l, W - m.r]); const y = d3.scaleLinear(ext(pts.map((p) => p.y), dy), [H - m.b, m.t]);
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', `${A.label} tegen ${B.label}, ${pts.length} diensten`);
@@ -1141,16 +1310,73 @@ function tekenVglDienst(el, dien, A, B) {
   svg.append('text').attr('x', m.l).attr('y', 10).text('↑ ' + B.label);
   const kleur = (r) => BCOL[r.beleving] || 'var(--axis)';
   const t = tipFor(el); const df = d3.utcFormat('%d-%m-%Y');
-  svg.append('g').selectAll('circle').data(pts).join('circle')
-    .attr('cx', (p, i) => x(p.x + (dx ? rnd(i, 1) * 0.5 : 0))).attr('cy', (p, i) => y(p.y + (dy ? rnd(i, 2) * 0.5 : 0))).attr('r', 4)
+  svg.append('g').selectAll('circle').data(pts).join('circle').attr('class', 'klik').attr('tabindex', 0).attr('role', 'button').attr('aria-label', (p) => 'Details van ' + df(new Date(p.r.datum)) + ' ' + p.r.dienst.toLowerCase())
+    .attr('cx', (p, i) => x(p.x + (dx ? rnd(i, 1) * 0.5 : 0))).attr('cy', (p, i) => y(p.y + (dy ? rnd(i, 2) * 0.5 : 0))).attr('r', 4.5)
     .style('fill', (p) => kleur(p.r)).style('fill-opacity', 0.8).style('stroke', 'var(--panel)').style('stroke-width', 1)
-    .on('pointermove', (ev, p) => t.show(ev, df(new Date(p.r.datum)) + ' ' + p.r.dienst.toLowerCase(), [[kleur(p.r), 'Beleving', p.r.beleving], [null, A.label, mpFmt(A, p.x)], [null, B.label, mpFmt(B, p.y)]])).on('pointerleave', () => t.hide());
-  // Lijn van het verband (kleinste kwadraten)
+    .on('pointermove', (ev, p) => t.show(ev, df(new Date(p.r.datum)) + ' ' + p.r.dienst.toLowerCase() + ' · klik voor details', [[kleur(p.r), 'Beleving', p.r.beleving], [null, A.label, mpFmt(A, p.x)], [null, B.label, mpFmt(B, p.y)]])).on('pointerleave', () => t.hide())
+    .on('click', (ev, p) => toonDienst(p.r)).on('keydown', (ev, p) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toonDienst(p.r); } });
   const mx = d3.mean(pts, (p) => p.x), my = d3.mean(pts, (p) => p.y); const sxx = d3.sum(pts, (p) => (p.x - mx) ** 2);
   if (sxx > 0 && pts.length >= 20) {
     const b = d3.sum(pts, (p) => (p.x - mx) * (p.y - my)) / sxx; const [x0, x1] = x.domain();
     svg.append('line').attr('x1', x(x0)).attr('x2', x(x1)).attr('y1', y(my + b * (x0 - mx))).attr('y2', y(my + b * (x1 - mx))).style('stroke', 'var(--fg)').style('stroke-width', 2).style('stroke-dasharray', '6 4').style('pointer-events', 'none');
   }
+}
+function tekenVglSpreiding(el, dien, sel) {
+  if (sel.length < 2) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Voeg een tweede meetpunt toe om de diensten tegen elkaar te zetten.'; el.appendChild(p); return; }
+  const A = sel[0].mp; const grid = document.createElement('div'); grid.className = 'grid'; el.appendChild(grid);
+  const teken = sel.slice(1).map(({ mp }) => { const c = document.createElement('div'); const h = document.createElement('h4'); h.className = 'small'; h.style.margin = '0';
+    h.textContent = `${A.label} tegen ${kleinLetter(mp.label)}`; const p = document.createElement('p'); p.className = 'note'; p.textContent = verbandZin(dien, A, mp).split(':').slice(1).join(':').split('.')[0].trim() + '.';
+    const ch = document.createElement('div'); ch.className = 'chart'; c.append(h, p, ch); grid.appendChild(c); return () => tekenSpreiding(ch, dien, A, mp); });
+  teken.forEach((f) => f());
+}
+function tekenVglMatrix(el, dien, sel) {
+  const vars = sel.map((x) => x.mp);
+  if (vars.length < 2) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Voeg een tweede meetpunt toe.'; el.appendChild(p); return; }
+  const cells = []; vars.forEach((a, i) => vars.forEach((b, j) => { if (j >= i) return; const ps = paren(dien, a, b); cells.push({ i, j, r: pearson(ps), n: ps.length }); }));
+  const box = document.createElement('div'); box.style.overflowX = 'auto'; el.appendChild(box);
+  const svg = d3.select(box).append('svg');
+  const tmp = svg.append('text').attr('class', 'lbl'); const lw = d3.max(vars, (v) => { tmp.text(v.label); return tmp.node().getComputedTextLength(); }) + 12; tmp.remove();
+  const cell = Math.max(40, Math.min(70, (Math.max(400, el.clientWidth) - lw) / (vars.length - 1)));
+  const n = vars.length; const TW = lw + (n - 1) * cell + 4; const H = (n - 1) * cell + 26;
+  svg.attr('width', TW).attr('height', H).attr('viewBox', `0 0 ${TW} ${H}`);
+  const t = tipFor(el);
+  svg.append('g').selectAll('text').data(vars.slice(1)).join('text').attr('class', 'lbl').attr('x', 0).attr('y', (v, i) => i * cell + cell / 2 + 4).text((v) => v.label);
+  svg.append('g').selectAll('rect').data(cells).join('rect').attr('class', 'klik').attr('x', (c) => lw + c.j * cell + 1).attr('y', (c) => (c.i - 1) * cell + 1).attr('width', cell - 2).attr('height', cell - 2).attr('rx', 3)
+    .attr('tabindex', 0).attr('role', 'button').attr('aria-label', (c) => 'Details: ' + vars[c.i].label + ' met ' + vars[c.j].label)
+    .style('fill', (c) => (c.r == null ? 'var(--grid)' : c.r >= 0 ? 'var(--accent)' : 'var(--bad)')).style('fill-opacity', (c) => (c.r == null ? 1 : 0.08 + 0.92 * Math.min(1, Math.abs(c.r) / 0.6)))
+    .on('click', (ev, c) => toonPaar(vars[c.i], vars[c.j])).on('keydown', (ev, c) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toonPaar(vars[c.i], vars[c.j]); } })
+    .on('pointermove', (ev, c) => t.show(ev, vars[c.i].label + ' × ' + vars[c.j].label + ' · klik voor details', [[null, 'Correlatie', c.r == null ? '–' : nl.format('.2f')(c.r) + ' (' + sterkteWoord(c.r) + ')'], [null, 'Diensten', F.int(c.n)]])).on('pointerleave', () => t.hide());
+  svg.append('g').selectAll('text').data(cells.filter((c) => c.r != null)).join('text').attr('class', 'val').attr('x', (c) => lw + c.j * cell + cell / 2).attr('y', (c) => (c.i - 1) * cell + cell / 2 + 4)
+    .attr('text-anchor', 'middle').style('pointer-events', 'none').style('fill', (c) => (Math.abs(c.r) >= 0.35 ? 'var(--bg)' : 'var(--fg)')).text((c) => nl.format('.2f')(c.r));
+  svg.append('g').selectAll('text').data(vars.slice(0, -1)).join('text').attr('x', (v, j) => lw + j * cell + cell / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((v, j) => j + 1);
+  const leg = document.createElement('p'); leg.className = 'note'; leg.textContent = 'Kolommen onderaan: ' + vars.slice(0, -1).map((v, j) => `${j + 1} ${v.label}`).join(' · '); el.appendChild(leg);
+}
+
+/* Bediening van de vergelijkingen */
+$('vgl-toevoegen').addEventListener('change', (e) => { const v = actieveVersie(); const k = e.target.value; if (!v || !k || v.mp.length >= MAX_MP || v.mp.some((m) => m.key === k)) return; v.mp.push({ key: k, kleur: vrijeKleur(v) }); vkBewaar(); render(); });
+$('vgl-naam').addEventListener('input', (e) => { const v = actieveVersie(); if (!v) return; v.naam = e.target.value.slice(0, 60) || 'Vergelijking'; vkBewaar();
+  const tab = $('vgl-tabs').querySelector('[aria-selected="true"]'); if (tab) tab.textContent = v.naam; });
+$('vgl-kopie').addEventListener('click', () => { const v = actieveVersie(); if (v) nieuweVersie({ ...v, naam: v.naam + ' (kopie)', mp: v.mp.map((x) => ({ ...x })) }); });
+$('vgl-verwijder').addEventListener('click', () => { const v = actieveVersie(); if (!v || VK.versies.length < 2) return; if (!confirm(`Vergelijking "${v.naam}" verwijderen?`)) return;
+  VK.versies = VK.versies.filter((x) => x.id !== v.id); VK.actief = VK.versies[0].id; vkBewaar(); render(); });
+// Delen: de vergelijking (naam, meetpunten, grafiek) gaat in de link. Het Excel zelf niet.
+$('vgl-link').addEventListener('click', async () => {
+  const v = actieveVersie(); if (!v) return;
+  const data = { n: v.naam, m: v.mp.map((x) => x.key), g: v.grafiek, s: v.schaal };
+  const url = location.href.split('#')[0] + '#vergelijking=' + encodeURIComponent(JSON.stringify(data));
+  const st = $('vgl-gedeeld');
+  try { await navigator.clipboard.writeText(url); st.textContent = 'Link gekopieerd. Wie hem opent en het Excel laadt, krijgt deze vergelijking erbij.'; }
+  catch (e) { prompt('Kopieer deze link:', url); st.textContent = ''; }
+  setTimeout(() => { st.textContent = ''; }, 6000);
+});
+function linkVergelijkingOvernemen() {
+  const m = /#vergelijking=([^&]+)/.exec(location.hash); if (!m) return false;
+  let d = null; try { d = JSON.parse(decodeURIComponent(m[1])); } catch (e) { return false; }
+  if (!d || !Array.isArray(d.m)) return false;
+  const keys = d.m.filter((k) => typeof k === 'string' && mpVan(k)).slice(0, MAX_MP);
+  const bestaand = VK.versies.find((v) => v.naam === d.n && v.mp.map((x) => x.key).join('|') === keys.join('|'));
+  if (bestaand) VK.actief = bestaand.id; else nieuweVersie({ naam: d.n, mp: keys.map((key, i) => ({ key, kleur: i })), grafiek: d.g, schaal: d.s });
+  vkBewaar(); history.replaceState(null, '', location.href.split('#')[0]); return true;
 }
 
 /* ===== Exporteren: CSV (voor Excel) en PDF (via afdrukken) ===== */
@@ -1160,6 +1386,7 @@ function csvDownload(naam, kop, rijen) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' })); a.download = naam;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 }
+const bestandsnaam = (t) => t.toLowerCase().replace(/[^0-9a-z]+/g, '-').replace(/^-|-$/g, '');
 const periodeNaam = () => `wk${wl(S.van)}-wk${wl(S.tot)}`.replace(/[^0-9a-z-]+/gi, '') + (S.dienst ? '-' + S.dienst.toLowerCase() : '');
 function huidigeSelectie() {
   const D = S.data; const weeks = d3.range(S.van, S.tot + 1).filter((w) => D.diensten.some((r) => r.week === w));
@@ -1167,26 +1394,168 @@ function huidigeSelectie() {
   return { weeks, dien };
 }
 $('vgl-csv-week').addEventListener('click', () => {
-  if (!S.data) return; const { weeks, dien } = huidigeSelectie(); const sel = gekozenMeetpunten();
-  const waarde = (mp, v) => (v == null ? null : mp.agg === 'pct' ? Math.round(v * 1000) / 10 : v);
-  csvDownload(`bison-meetpunten-per-week-${periodeNaam()}.csv`, ['Week', ...sel.map((m) => mpWeekNaam(m).replace('(% van de diensten)', '(%)'))],
+  if (!S.data) return; const { weeks, dien } = huidigeSelectie(); const v = actieveVersie(); const sel = versieMeetpunten(v).map((x) => x.mp);
+  const waarde = (mp, x) => (x == null ? null : mp.agg === 'pct' ? Math.round(x * 1000) / 10 : x);
+  csvDownload(`bison-${bestandsnaam(v.naam)}-per-week-${periodeNaam()}.csv`, ['Week', ...sel.map((m) => mpWeekNaam(m).replace('(% van de diensten)', '(%)'))],
     weeks.map((w) => [wl(w), ...sel.map((m) => waarde(m, mpWeek(m, dien.filter((r) => r.week === w))))]));
 });
 $('vgl-csv-dienst').addEventListener('click', () => {
   if (!S.data) return; const { dien } = huidigeSelectie(); const df = d3.utcFormat('%d-%m-%Y');
   const rs = dien.slice().sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : a.dienst === 'Dag' ? -1 : 1));
-  csvDownload(`bison-meetpunten-per-dienst-${periodeNaam()}.csv`, ['Datum', 'Dienst', 'Week', 'Beleving', ...S.mp.map((m) => m.label + (m.agg === 'pct' ? ' (1 = ja)' : ''))],
+  csvDownload(`bison-alle-meetpunten-per-dienst-${periodeNaam()}.csv`, ['Datum', 'Dienst', 'Week', 'Beleving', ...S.mp.map((m) => m.label + (m.agg === 'pct' ? ' (1 = ja)' : ''))],
     rs.map((r) => [df(new Date(r.datum)), r.dienst, wl(r.week), r.beleving, ...S.mp.map((m) => m.get(r))]));
 });
 $('vgl-pdf').addEventListener('click', () => {
   if (!S.data) return; const box = $('vgl-tabel-box'); const wasOpen = box.open; box.open = true;
-  const titel = document.title; document.title = `Bison meetpunten ${periodeNaam()}`;
+  const titel = document.title; document.title = `Bison ${actieveVersie().naam} ${periodeNaam()}`;
   document.body.classList.add('print-vgl');
   const klaar = () => { document.body.classList.remove('print-vgl'); document.title = titel; box.open = wasOpen; removeEventListener('afterprint', klaar); };
   addEventListener('afterprint', klaar); window.print();
 });
-['vgl-a', 'vgl-b', 'vgl-c'].forEach((id) => $(id).addEventListener('change', (e) => { VK.vgl[id.slice(-1)] = e.target.value; vkBewaar(); render(); }));
-$('samen-doel').addEventListener('change', (e) => { VK.doel = e.target.value; vkBewaar(); render(); });
+
+/* ===== Details: klik op een week, dienst, tegel, balk of vak voor meer informatie ===== */
+const DETAIL = { stapel: [] };
+const dfLang = d3.utcFormat('%A %-d %B %Y');
+const NL_DAG = { Monday: 'maandag', Tuesday: 'dinsdag', Wednesday: 'woensdag', Thursday: 'donderdag', Friday: 'vrijdag', Saturday: 'zaterdag', Sunday: 'zondag' };
+const NL_MAAND = { January: 'januari', February: 'februari', March: 'maart', April: 'april', May: 'mei', June: 'juni', July: 'juli', August: 'augustus', September: 'september', October: 'oktober', November: 'november', December: 'december' };
+const datumLang = (iso) => dfLang(new Date(iso)).replace(/[A-Z][a-z]+/g, (w) => NL_DAG[w] || NL_MAAND[w] || w);
+const datumKort = (iso) => d3.utcFormat('%d-%m-%Y')(new Date(iso));
+const meldingenVan = (r) => S.data.meldingen.filter((m) => m.datum === r.datum && m.dienst === r.dienst);
+function el(tag, cls, tekst) { const e = document.createElement(tag); if (cls) e.className = cls; if (tekst != null) e.textContent = tekst; return e; }
+function belevingChip(b) { const c = el('span', 'chip'); const sw = el('span', 'sw'); sw.style.background = BCOL[b] || 'var(--axis)'; sw.style.marginRight = '5px'; c.append(sw, b); return c; }
+// Opent het detailvenster; 'terug' gaat naar het vorige venster
+function openDetail(titel, vul, terug = true) {
+  const dlg = $('detail');
+  if (!terug) DETAIL.stapel = [];
+  DETAIL.stapel.push({ titel, vul });
+  tekenDetail();
+  if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  $('detail-body').scrollTop = 0;
+}
+function tekenDetail() {
+  const top = DETAIL.stapel[DETAIL.stapel.length - 1]; if (!top) return;
+  $('detail-titel').textContent = top.titel; $('detail-terug').hidden = DETAIL.stapel.length < 2;
+  const body = $('detail-body'); body.replaceChildren(); top.vul(body);
+}
+$('detail-sluit').addEventListener('click', () => $('detail').close());
+$('detail-terug').addEventListener('click', () => { DETAIL.stapel.pop(); tekenDetail(); });
+$('detail').addEventListener('close', () => { DETAIL.stapel = []; });
+$('detail').addEventListener('click', (e) => { if (e.target === $('detail')) $('detail').close(); });
+// Tabel met diensten; elke rij opent de details van die dienst
+function dienstTabel(rs, extra = []) {
+  const box = el('div', 'tablebox'); const t = el('table'); const th = el('thead'); const hr = el('tr');
+  ['Datum', 'Dienst', 'Beleving', ...extra.map((x) => x.label), 'Meldingen'].forEach((x, i) => hr.appendChild(el('th', i > 2 ? 'num' : '', x))); th.appendChild(hr);
+  const tb = el('tbody');
+  rs.forEach((r) => { const tr = el('tr', 'klikrij'); tr.tabIndex = 0; tr.title = 'Details van deze dienst';
+    tr.append(el('td', '', datumKort(r.datum)), el('td', '', r.dienst)); const tdb = el('td'); tdb.appendChild(belevingChip(r.beleving)); tr.appendChild(tdb);
+    extra.forEach((mp) => tr.appendChild(el('td', 'num', mpFmt(mp, mp.get(r))))); tr.appendChild(el('td', 'num', F.int(meldingenVan(r).length)));
+    klikbaar(tr, () => toonDienst(r)); tb.appendChild(tr); });
+  t.append(th, tb); box.appendChild(t); return box;
+}
+function meldingLijst(ms, huidig) {
+  const ul = el('ul', 'detail-meld');
+  if (!ms.length) { ul.appendChild(el('li', 'muted', 'Geen meldingen.')); return ul; }
+  ms.forEach((m) => { const li = el('li'); const kop = el('div', 'muted small', (m.datum ? datumKort(m.datum) : '') + ' · ' + m.dienst + (m.partijen.length ? ' · ' + m.partijen.join(', ') : ''));
+    const p = el('p', '', m.melding); const th = el('div'); (m.themas.length ? m.themas : [null]).forEach((c) => th.appendChild(el('span', 'chip', c ? thNaam(c) : 'Overig')));
+    li.append(kop, p, th);
+    const r = S.data.diensten.find((x) => x.datum === m.datum && x.dienst === m.dienst);
+    if (r && r !== huidig) { const b = el('button', 'link-knop', 'Naar deze dienst'); b.style.justifySelf = 'start'; b.type = 'button'; b.addEventListener('click', () => toonDienst(r)); li.appendChild(b); }
+    ul.appendChild(li); });
+  return ul;
+}
+function kerngetallen(rs) {
+  const st = statsOf(rs); const g = el('div', 'detail-tiles');
+  [['Diensten', F.int(st.n)], ['Oranje of rood', st.pct == null ? '–' : F.pct(st.pct)], ['Rood', F.int(st.rood)], ['Geen overdracht', F.int(st.geen)], ['Gem. vaartijd', st.vaart == null ? '–' : F.dec1(st.vaart) + ' u']]
+    .forEach(([l, v]) => { const d = el('div', 'tile'); d.append(el('span', 'lbl', l), el('span', 'val', v)); g.appendChild(d); });
+  return g;
+}
+function toonWeek(week) {
+  const D = S.data; if (!D) return;
+  openDetail('Week ' + wl(week), (body) => {
+    const rs = D.diensten.filter((r) => r.week === week && (!S.dienst || r.dienst === S.dienst));
+    const ms = D.meldingen.filter((m) => m.week === week && dienstPast(m));
+    if (S.dienst) body.appendChild(el('p', 'muted small', `Alleen ${S.dienst.toLowerCase()}diensten (filter bovenaan).`));
+    if (D.laagwater.has(week)) body.appendChild(el('p', 'muted small', 'Deze week valt in de laagwaterperiode.'));
+    body.appendChild(kerngetallen(rs));
+    const auto = weekConclusie(week, D.diensten.filter((r) => !S.dienst || r.dienst === S.dienst), D.meldingen.filter(dienstPast));
+    const eigen = (D.conclusies.find((c) => c.week === week && c.tekst) || {}).tekst;
+    if (eigen) { const p = el('p'); p.append(el('b', '', 'Uit het weekblad: '), eigen); body.appendChild(p); }
+    if (auto) { const p = el('p'); p.append(el('b', '', 'Uit de cijfers: '), auto); body.appendChild(p); }
+    // Waarden van de meetpunten in de actieve vergelijking
+    const v = actieveVersie(); const sel = v ? versieMeetpunten(v) : [];
+    if (sel.length) {
+      body.appendChild(el('h4', '', `${v.naam}: deze week`));
+      const ul = el('ul', 'legend'); sel.forEach(({ mp, kleur }) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = kleur; li.append(sw, `${mp.label}: `, el('b', '', mpFmt(mp, mpWeek(mp, rs)))); ul.appendChild(li); }); body.appendChild(ul);
+    }
+    body.appendChild(el('h4', '', 'Diensten'));
+    body.appendChild(el('p', 'muted small', 'Klik op een dienst voor alle cijfers en meldingen van die dienst.'));
+    body.appendChild(dienstTabel(rs, sel.filter((x) => !x.mp.key.startsWith('b:') && x.mp.key !== 'meld:n').slice(0, 3).map((x) => x.mp)));
+    body.appendChild(el('h4', '', `Meldingen (${F.int(ms.length)})`)); body.appendChild(meldingLijst(ms));
+    const va = (VA.items || []).filter((x) => x.week === week);
+    if (va.length) { body.appendChild(el('h4', '', 'Verbeteracties uit het weekblad'));
+      const ul = el('ul', 'detail-meld'); va.forEach((x) => { const li = el('li'); li.append(el('p', '', (x.onderwerp ? x.onderwerp + ': ' : '') + x.knelpunt), el('p', 'muted', '→ ' + x.voorstel)); ul.appendChild(li); }); body.appendChild(ul); }
+    const nav = el('div', 'rij detail-nav'); const alle = [...new Set(D.diensten.map((r) => r.week))].sort((a, b) => a - b); const i = alle.indexOf(week);
+    if (i > 0) { const b = el('button', 'btn-licht', '← Week ' + wl(alle[i - 1])); b.type = 'button'; b.addEventListener('click', () => { DETAIL.stapel.pop(); toonWeek(alle[i - 1]); }); nav.appendChild(b); }
+    if (i < alle.length - 1) { const b = el('button', 'btn-licht', 'Week ' + wl(alle[i + 1]) + ' →'); b.type = 'button'; b.addEventListener('click', () => { DETAIL.stapel.pop(); toonWeek(alle[i + 1]); }); nav.appendChild(b); }
+    body.appendChild(nav);
+  }, $('detail').open);
+}
+function toonDienst(r) {
+  const D = S.data; if (!D) return;
+  openDetail(`${r.dienst}dienst ${datumKort(r.datum)}`, (body) => {
+    const kop = el('p'); kop.append(datumLang(r.datum) + ' · week ' + wl(r.week) + ' · ', belevingChip(r.beleving)); body.appendChild(kop);
+    body.appendChild(el('h4', '', 'Meldingen')); body.appendChild(meldingLijst(meldingenVan(r), r));
+    body.appendChild(el('h4', '', 'Alle cijfers van deze dienst'));
+    const box = el('div', 'tablebox'); const t = el('table'); const tb = el('tbody');
+    S.mp.filter((m) => !m.key.startsWith('b:') && m.key !== 'd:nacht').forEach((mp) => { const v = mp.get(r); if (mp.key.startsWith('t:') && !v) return;
+      const tr = el('tr'); tr.append(el('td', '', mp.label), el('td', 'num', v == null ? 'niet ingevuld' : mp.agg === 'pct' ? (v ? 'ja' : 'nee') : mpFmt(mp, v))); tb.appendChild(tr); });
+    t.appendChild(tb); box.appendChild(t); body.appendChild(box);
+    const nav = el('div', 'rij detail-nav'); const alle = D.diensten.slice().sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : a.dienst === 'Dag' ? -1 : 1)); const i = alle.indexOf(r);
+    if (i > 0) { const b = el('button', 'btn-licht', '← Vorige dienst'); b.type = 'button'; b.addEventListener('click', () => { DETAIL.stapel.pop(); toonDienst(alle[i - 1]); }); nav.appendChild(b); }
+    if (i < alle.length - 1) { const b = el('button', 'btn-licht', 'Volgende dienst →'); b.type = 'button'; b.addEventListener('click', () => { DETAIL.stapel.pop(); toonDienst(alle[i + 1]); }); nav.appendChild(b); }
+    const w = el('button', 'btn-licht', 'Hele week ' + wl(r.week)); w.type = 'button'; w.addEventListener('click', () => toonWeek(r.week)); nav.appendChild(w);
+    body.appendChild(nav);
+  }, $('detail').open);
+}
+function toonLijst(titel, uitleg, rs, extra = []) {
+  openDetail(titel, (body) => {
+    if (uitleg) body.appendChild(el('p', 'muted', uitleg));
+    body.appendChild(el('p', 'muted small', `${F.int(rs.length)} ${rs.length === 1 ? 'dienst' : 'diensten'} in de gekozen periode. Klik op een dienst voor de details.`));
+    body.appendChild(dienstTabel(rs, extra));
+  }, $('detail').open);
+}
+function toonMeldingen(titel, ms) {
+  openDetail(titel, (body) => { body.appendChild(el('p', 'muted small', `${F.int(ms.length)} ${ms.length === 1 ? 'melding' : 'meldingen'} in de gekozen periode.`)); body.appendChild(meldingLijst(ms.slice().sort((a, b) => (a.datum < b.datum ? 1 : -1)))); }, $('detail').open);
+}
+function toonPaar(A, B) {
+  if (!A || !B || !S.data) return;
+  openDetail(`${A.label} en ${kleinLetter(B.label)}`, (body) => {
+    const { dien } = huidigeSelectie();
+    body.appendChild(el('p', '', verbandZin(dien, A, B)));
+    const ch = el('div', 'chart'); body.appendChild(ch);
+    const leg = el('ul', 'legend'); [['Groen', 'var(--ok)'], ['Oranje', 'var(--warn)'], ['Rood', 'var(--bad)'], ['Overig', 'var(--axis)']].forEach(([n, c]) => { const li = el('li'); const sw = el('span', 'sw'); sw.style.background = c; li.append(sw, n); leg.appendChild(li); }); body.appendChild(leg);
+    body.appendChild(el('p', 'muted small', 'Klik op een stip voor de details van die dienst.'));
+    const b = el('button', 'btn', 'Bewaar als nieuwe vergelijking'); b.type = 'button';
+    b.addEventListener('click', () => { $('detail').close(); nieuweVersie({ naam: `${A.label} × ${B.label}`.slice(0, 60), mp: [{ key: A.key, kleur: 0 }, { key: B.key, kleur: 1 }], grafiek: 'spreiding' }); naarVergelijken(); });
+    body.appendChild(b);
+    requestAnimationFrame(() => tekenSpreiding(ch, dien, A, B, { hoogte: 300 }));
+  }, $('detail').open);
+}
+// Kerncijfers zijn klikbaar
+function koppelTegels() {
+  const sel = () => huidigeSelectie().dien;
+  const vt = () => mpVan('k:actieve vaartijd') || null;
+  const def = {
+    'k-diensten': () => toonLijst('Alle diensten', null, sel()),
+    'k-pct': () => toonLijst('Oranje en rode diensten', null, sel().filter((r) => r.beleving === 'Oranje' || r.beleving === 'Rood')),
+    'k-rood': () => toonLijst('Rode diensten', 'De diensten met de zwaarste beleving.', sel().filter((r) => r.beleving === 'Rood')),
+    'k-vaart': () => toonLijst('Diensten met de meeste vaartijd', 'Gesorteerd van veel naar weinig actieve vaartijd.', sel().filter((r) => r.vaartijd != null).sort((a, b) => b.vaartijd - a.vaartijd), vt() ? [vt()] : []),
+    'k-geen': () => toonLijst('Geen overdracht ontvangen', null, sel().filter((r) => r.beleving === 'Geen overdracht')),
+    'k-veilig': () => toonLijst('Diensten met een veiligheidsmelding', 'Diensten met een ongeval of onveilige situatie.', sel().filter((r) => (r.ongeval || 0) + (r.onveilig || 0) > 0))
+  };
+  Object.entries(def).forEach(([id, fn]) => { const tile = $(id).closest('.tile'); tile.classList.add('klik-tegel'); tile.tabIndex = 0; tile.setAttribute('role', 'button'); tile.title = 'Klik voor de diensten'; klikbaar(tile, () => { if (S.data) fn(); }); });
+}
+koppelTegels();
 
 /* ===== Verbeteracties uit de plaatjes lezen (tekstherkenning in de browser, niets wordt verstuurd) ===== */
 const OCR_SLEUTEL = 'bison-ocr-v1';
@@ -1354,7 +1723,10 @@ function drawMeldingen() {
     const tr = document.createElement('tr'); const td = (t, c) => { const x = document.createElement('td'); if (c) x.className = c; x.textContent = t; tr.appendChild(x); return x; };
     td(m.datum ? df(new Date(m.datum)) : '', 'num'); td(m.dienst); td(m.melding, 'wrapc');
     const c = document.createElement('td'); (m.themas.length ? m.themas.map(thNaam) : ['Overig']).forEach((n) => { const s = document.createElement('span'); s.className = 'chip'; s.textContent = n; c.appendChild(s); }); tr.appendChild(c);
-    td(m.partijen.join(', ')); tb.appendChild(tr);
+    td(m.partijen.join(', '));
+    const r = D.diensten.find((x) => x.datum === m.datum && x.dienst === m.dienst);
+    if (r) { tr.className = 'klikrij'; tr.tabIndex = 0; tr.title = 'Details van deze dienst'; klikbaar(tr, () => toonDienst(r)); }
+    tb.appendChild(tr);
   });
 }
 // Stelt voor één week een korte conclusie op uit de diensten en meldingen van die week (vaste regels, geen AI).
@@ -1388,6 +1760,7 @@ function drawConclusies(list, weeks, dien, meld) {
     const s = document.createElement('summary'); s.textContent = 'Week ' + wl(c.week) + (c.eigen ? '' : ' (automatisch)'); d.appendChild(s);
     if (c.eigen) { const p = document.createElement('p'); const b = document.createElement('b'); b.textContent = 'Uit het weekblad: '; p.append(b, c.eigen); d.appendChild(p); }
     if (c.auto) { const p = document.createElement('p'); const b = document.createElement('b'); b.textContent = 'Uit de cijfers: '; p.append(b, c.auto); d.appendChild(p); }
+    const k = document.createElement('button'); k.type = 'button'; k.className = 'link-knop'; k.style.marginTop = '6px'; k.textContent = 'Alle details van week ' + wl(c.week); k.addEventListener('click', () => toonWeek(c.week)); d.appendChild(k);
     box.appendChild(d);
   });
 }
@@ -1537,7 +1910,7 @@ async function load(buf, naam) {
     setStatus('Bezig met inlezen…');
     const book = await XLSX_READER.read(buf); const data = extract(book);
     if (!data.diensten.length) throw new Error('Geen weekbladen gevonden. Klopt het dat de bladen "Week NN 2026" heten?');
-    S.data = data; S.mp = maakMeetpunten(data); vulMeetpuntKeuzes();
+    S.data = data; S.mp = maakMeetpunten(data); vulMeetpuntKeuzes(); const viaLink = linkVergelijkingOvernemen();
     const weeks = [...new Set(data.diensten.map((r) => r.week))].sort((a, b) => a - b);
     MEERJAREN = new Set(weeks.map((w) => Math.floor(w / 100))).size > 1;
     S.van = weeks[0]; S.tot = weeks[weeks.length - 1]; S.thema = null;
@@ -1546,6 +1919,7 @@ async function load(buf, naam) {
     $('filters').hidden = false; $('dash').hidden = false;
     setStatus(`${naam}: ${F.int(data.diensten.length)} diensten en ${F.int(data.meldingen.length)} meldingen ingelezen, week ${wl(S.van)} t/m ${wl(S.tot)}.`);
     render();
+    if (viaLink) naarVergelijken();
     leesVerbeteracties(data, book).catch((e) => { console.error(e); VA.status = 'fout'; VA.fout = e.message; drawVerbeteracties(); });
   } catch (e) { console.error(e); setStatus('Het bestand kon niet worden ingelezen: ' + e.message, true); }
 }

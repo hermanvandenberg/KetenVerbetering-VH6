@@ -8,9 +8,10 @@ Dashboard voor de wekelijkse rapportage overdracht van de havendienst Bison (ket
 2. Klik op **Excel kiezen** (of sleep het bestand op de pagina) en kies de nieuwste `Rapportage overdracht Bison.xlsx`.
 3. Het dashboard vult zich met alle weekbladen. Met de filters bovenaan kies je een periode of alleen dag- of nachtdienst.
 4. Met **Indeling aanpassen** zet je onderdelen hoger of lager of verberg je ze. Die keuze wordt per browser onthouden.
-5. Bij **Meetpunten vergelijken** kies je zelf twee of drie meetpunten: elke kolom uit het Excel, de beleving, het aantal meldingen of een thema uit de meldingen. Je ziet ze per week over elkaar (lijn of staaf, eigen of zelfde schaal) en per dienst tegen elkaar, met een zin over het verband. Met **CSV** download je de cijfers voor Excel, met **PDF** druk je de vergelijking af of sla je hem op als PDF.
-6. Bij **Samenhang** vergelijk je alles met één meetpunt naar keuze. Klik op een vak in de matrix of op **Bekijk** om dat paar te vergelijken.
-7. Bij elke grafiek onder **Registraties per week** kies je zelf lijn of staaf.
+5. Bij **Meetpunten vergelijken** maak je zoveel vergelijkingen als je wilt (tabbladen), elk met een eigen naam en tot 8 meetpunten: elke kolom uit het Excel, de beleving, het aantal meldingen of een thema uit de meldingen. Kies per vergelijking de grafiek: lijn, staaf, gestapeld, onder elkaar, per dienst (spreiding) of samenhang. Klik op een meetpunt in de legenda om het uit te lichten. Vergelijkingen worden in de browser bewaard; met **Link delen** krijgt een collega dezelfde vergelijking. Met **CSV** download je de cijfers voor Excel, met **PDF** druk je de vergelijking af of sla je hem op als PDF.
+6. Bij **Samenhang** vergelijk je alles met één meetpunt naar keuze. Klik op een vak in de matrix of op **Bekijk** voor de details van dat paar; daar kun je het ook als vergelijking bewaren.
+7. Bijna alles is klikbaar voor meer details: de kerncijfers, een week in de grafieken, een kleur bij dag/nacht, een partij, een vak in de themakaart, een melding, een stip per dienst. In het detailvenster klik je door naar een dienst of week, en ga je met **Terug** weer terug.
+8. Bij elke grafiek onder **Registraties per week** kies je zelf lijn of staaf.
 
 Het Excel wordt alleen in je eigen browser gelezen. Er wordt niets geüpload of opgeslagen, ook niet op GitHub.
 
